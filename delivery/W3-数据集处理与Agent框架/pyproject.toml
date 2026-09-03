@@ -1,0 +1,36 @@
+[project]
+name = "gui-agent-w3"
+version = "1.0.0"
+description = "公开 GUI 数据集处理与基础 Agent 框架（第 3 周交付）"
+requires-python = ">=3.10"
+
+# **必须与源仓库一致（行宽 100）。** 不写这一段的话，ruff 找到的最近配置
+# 就是本文件，退回默认的 88 字符，于是把这里的代码重排成和源仓库不同的
+# 样子——交付副本与源码逐字对不上，评审时无从判断哪份是真的。
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "windows: 需要真实 Windows 桌面，CI 上跳过",
+    "gpu: 需要可用 GPU",
+    "slow: 耗时较长（模型推理等）",
+]
+
+[tool.coverage.run]
+# 只统计**本周交付的三个包**。src/ 下另有 control、perception、core、finetune，
+# 它们分属第 2、4、5 周，是为了让本包能独立 import 才一并提供的，
+# 计进来会把覆盖率稀释成一个没有意义的数（见 README §四）。
+source = ["data", "llm", "agent"]
+omit = [
+    "*/__init__.py",
+    # 出图模块，依赖 matplotlib，无单元测试；其产物见 docs/数据集统计分析报告.md
+    "*/data/charts.py",
+]

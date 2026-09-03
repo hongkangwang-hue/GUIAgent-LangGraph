@@ -1,0 +1,37 @@
+# 公开 GUI 数据集处理与基础 Agent 框架 —— 依赖
+#
+# 分四段。只跑单元测试的话装第一段就够；后三段按你要用哪条通路来装。
+# 缺失的依赖在代码里都有降级路径或延迟导入，不会在 import 阶段就炸。
+
+# --- 1. 单元测试必需 ---
+pytest>=8.0
+pytest-cov>=5.0
+numpy>=1.24                # perception.types / capture 的数组运算
+pillow>=10.0               # 截图对象
+pyyaml>=6.0                # 提示词模板外置为 YAML（agent/prompts.py）
+
+# --- 2. 数据集预处理（scripts/prepare_datasets.py）---
+datasets>=2.19             # Hugging Face 数据集装载
+huggingface-hub>=0.23      # 下载 ScreenSpot / ScreenSpot-v2
+pandas>=2.0                # parquet 读取与统计
+matplotlib>=3.8            # data/charts.py 出四张图
+requests>=2.31             # survey_web_datasets.py 走 datasets-server /rows API
+
+# --- 3. API 调用通路（大纲第 3 周任务 4 前半）---
+# 大纲点名 LangChain。llm/openai_compat.py 走 langchain_openai.ChatOpenAI，
+# 见 README §三 偏差 1 说明为什么没有引入 LangChain 的 Agent/Chain 抽象。
+langchain>=0.3.0
+langchain-openai>=0.2.0
+python-dotenv>=1.0         # 从 .env 读凭据；**仓库内不得出现任何 API Key**
+
+# --- 4. 本地部署通路（大纲第 3 周任务 4 后半）---
+# 只有真的要在本机加载 Qwen2.5-VL 时才需要，体积很大。
+# 不装的话 llm/qwen_vl_local.py 仍可 import，只是构造后端时报缺依赖。
+torch>=2.4
+transformers>=4.45
+accelerate>=0.34
+bitsandbytes>=0.43         # 4-bit NF4 量化加载
+peft>=0.13                 # LoRA 适配器加载
+qwen-vl-utils>=0.0.8       # smart_resize 与视觉输入预处理
+fastapi>=0.115             # scripts/serve_local_model.py 暴露 OpenAI 兼容接口
+uvicorn>=0.30
