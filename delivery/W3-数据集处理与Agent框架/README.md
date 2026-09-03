@@ -121,7 +121,7 @@ API 调用。`llm/providers.py` 的 `weights_local` 字段就是记这件事的�
 
 ```bash
 cd <本目录>
-pip install -r requirements.txt          # 只跑测试的话装第 1 段即可
+pip install -r requirements.txt          # 跑测试装第 1 段（1a+1b+1c）即可
 python -m pytest                         # 369 passed in 4.22s
 python -m pytest --cov=data --cov=llm --cov=agent --cov-report=term-missing
 ```
