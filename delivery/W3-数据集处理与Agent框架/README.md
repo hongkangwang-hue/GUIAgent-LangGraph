@@ -128,7 +128,8 @@ python -m pytest --cov=data --cov=llm --cov=agent --cov-report=term-missing
 
 `pyproject.toml` 里配了 `pythonpath = ["src"]`，**不需要安装**，直接跑。
 
-实测结果（2026-09-03，Windows 11 / conda `gui-agent` / Python 3.10.20）：
+实测结果（2026-09-03，Windows 11 / conda `gui-agent` / Python 3.10.20，
+**zip 解压到干净临时目录后执行**）。完整记录见 `单元测试报告.md`：
 
 ```
 369 passed in 4.22s
@@ -258,6 +259,7 @@ sys.path.insert(
 ```
 W3-数据集处理与Agent框架/
 ├── README.md                     本文件
+├── 单元测试报告.md                369 个用例的实测记录，含「本报告不覆盖什么」
 ├── pyproject.toml                pytest / ruff / 覆盖率配置
 ├── requirements.txt              依赖清单（四段，按用途分）
 ├── src/
