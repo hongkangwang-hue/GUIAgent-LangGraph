@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-08-24T10:05:16",
+  "executed": true,
+  "repeats": 5,
+  "scope": "send_message",
+  "records": [
+    {
+      "task": "send_message",
+      "title": "发送消息",
+      "attempt": 1,
+      "verified": true,
+      "verify_detail": "✓ messages.log 含 '你好世界'",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 22,
+      "duration_s": 300.2,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-094416-aa40f0",
+      "error": "",
+      "latency": {
+        "api_ms": 239912.9,
+        "grounding_ms": 0.1,
+        "execute_ms": 10147.9,
+        "screenshot_ms": 3883.9
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ 窗口标题命中 '测试消息 - Test Messenger'",
+      "subtasks": 6,
+      "empty_done": 1
+    },
+    {
+      "task": "send_message",
+      "title": "发送消息",
+      "attempt": 2,
+      "verified": false,
+      "verify_detail": "✗ messages.log 不含 '你好世界'；实际内容：''",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 9,
+      "duration_s": 78.6,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-094922-d821c7",
+      "error": "",
+      "latency": {
+        "api_ms": 65580.9,
+        "grounding_ms": 0.0,
+        "execute_ms": 1024.9,
+        "screenshot_ms": 1182.5
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ 窗口标题命中 '测试消息 - Test Messenger'",
+      "subtasks": 6,
+      "empty_done": 3,
+      "excluded": true,
+      "exclusion_reason": "人为干预：执行期间操作了鼠标"
+    },
+    {
+      "task": "send_message",
+      "title": "发送消息",
+      "attempt": 3,
+      "verified": true,
+      "verify_detail": "✓ messages.log 含 '你好世界'",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 21,
+      "duration_s": 285.3,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-095047-b006ef",
+      "error": "",
+      "latency": {
+        "api_ms": 248968.2,
+        "grounding_ms": 0.1,
+        "execute_ms": 10051.5,
+        "screenshot_ms": 3207.5
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ 窗口标题命中 '测试消息 - Test Messenger'",
+      "subtasks": 6,
+      "empty_done": 1
+    },
+    {
+      "task": "send_message",
+      "title": "发送消息",
+      "attempt": 4,
+      "verified": true,
+      "verify_detail": "✓ messages.log 含 '你好世界'",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 21,
+      "duration_s": 279.0,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-095538-d9518f",
+      "error": "",
+      "latency": {
+        "api_ms": 240923.5,
+        "grounding_ms": 0.1,
+        "execute_ms": 10061.7,
+        "screenshot_ms": 3862.4
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ 窗口标题命中 '测试消息 - Test Messenger'",
+      "subtasks": 6,
+      "empty_done": 1
+    },
+    {
+      "task": "send_message",
+      "title": "发送消息",
+      "attempt": 5,
+      "verified": true,
+      "verify_detail": "✓ messages.log 含 '你好世界'",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 23,
+      "duration_s": 291.9,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-100023-e2fda9",
+      "error": "",
+      "latency": {
+        "api_ms": 251255.3,
+        "grounding_ms": 0.1,
+        "execute_ms": 10855.1,
+        "screenshot_ms": 3630.5
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ 窗口标题命中 '测试消息 - Test Messenger'",
+      "subtasks": 6,
+      "empty_done": 0
+    }
+  ],
+  "exclusions": [
+    {
+      "task": "send_message",
+      "attempt": 2,
+      "reason": "人为干预：执行期间操作了鼠标，改变了窗口焦点",
+      "recorded_by": "操作者自述，2026-08-24",
+      "note": "标记而非删除。删掉的话没人知道这一批从 5 轮变成了 4 轮。"
+    }
+  ]
+}

@@ -1,11 +1,8 @@
 {
-  "generated_at": "2026-08-24T21:11:12",
+  "generated_at": "2026-08-24T00:36:49",
   "executed": true,
   "repeats": 5,
   "scope": "all",
-  "backend": "在线 / 阿里云百炼 / qwen3-vl-8b-instruct",
-  "offline": false,
-  "tag": "online",
   "records": [
     {
       "task": "open_browser",
@@ -15,23 +12,21 @@
       "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 4,
+      "steps": 6,
       "duration_s": 17.4,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-205900-9c6018",
+      "trajectory_id": "traj-20260824-002611-8a9fb9",
       "error": "",
       "latency": {
-        "api_ms": 6139.6,
+        "api_ms": 6575.7,
         "grounding_ms": 0.0,
-        "execute_ms": 1553.1,
-        "screenshot_ms": 1033.4
+        "execute_ms": 1087.4,
+        "screenshot_ms": 227.9
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 1,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 3,
+      "empty_done": 0
     },
     {
       "task": "open_browser",
@@ -41,49 +36,45 @@
       "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 4,
-      "duration_s": 12.3,
+      "steps": 6,
+      "duration_s": 13.5,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-205923-cdd2b5",
+      "trajectory_id": "traj-20260824-002634-b2d347",
       "error": "",
       "latency": {
-        "api_ms": 6169.3,
+        "api_ms": 6194.9,
         "grounding_ms": 0.0,
-        "execute_ms": 1541.1,
-        "screenshot_ms": 588.5
+        "execute_ms": 1050.3,
+        "screenshot_ms": 529.1
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 1,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 3,
+      "empty_done": 0
     },
     {
       "task": "open_browser",
       "title": "打开浏览器",
       "attempt": 3,
       "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe",
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 5,
-      "duration_s": 17.2,
+      "steps": 6,
+      "duration_s": 13.6,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-205940-2e54af",
+      "trajectory_id": "traj-20260824-002653-58cdf7",
       "error": "",
       "latency": {
-        "api_ms": 7770.1,
+        "api_ms": 6431.1,
         "grounding_ms": 0.0,
-        "execute_ms": 3543.2,
-        "screenshot_ms": 797.9
+        "execute_ms": 1027.9,
+        "screenshot_ms": 401.8
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 3,
+      "empty_done": 0
     },
     {
       "task": "open_browser",
@@ -93,283 +84,261 @@
       "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 4,
-      "duration_s": 13.1,
+      "steps": 6,
+      "duration_s": 15.2,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210002-af195f",
+      "trajectory_id": "traj-20260824-002711-f1428a",
       "error": "",
       "latency": {
-        "api_ms": 6471.9,
+        "api_ms": 8523.5,
         "grounding_ms": 0.0,
-        "execute_ms": 1547.2,
-        "screenshot_ms": 1017.3
+        "execute_ms": 1038.5,
+        "screenshot_ms": 650.9
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 1,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 3,
+      "empty_done": 0
     },
     {
       "task": "open_browser",
       "title": "打开浏览器",
       "attempt": 5,
       "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe",
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 4,
-      "duration_s": 12.6,
+      "steps": 6,
+      "duration_s": 14.2,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210020-0cff8b",
+      "trajectory_id": "traj-20260824-002731-1d9537",
       "error": "",
       "latency": {
-        "api_ms": 5965.2,
+        "api_ms": 6554.7,
         "grounding_ms": 0.0,
-        "execute_ms": 1558.7,
-        "screenshot_ms": 1019.6
+        "execute_ms": 1037.2,
+        "screenshot_ms": 665.8
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 1,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 3,
+      "empty_done": 0
     },
     {
       "task": "search_content",
       "title": "搜索指定内容",
       "attempt": 1,
-      "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 10 个：msedge.exe; ✓ 窗口标题命中 'Python 官方文档 - 搜索 - 用户配置 1 - Microsoft\\u200b Edge'",
-      "loop_status": "completed",
-      "model_said_done": true,
-      "steps": 12,
-      "duration_s": 34.9,
+      "verified": false,
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 14,
+      "duration_s": 43.8,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210037-22ba00",
+      "trajectory_id": "traj-20260824-002751-350960",
       "error": "",
       "latency": {
-        "api_ms": 18576.9,
+        "api_ms": 18523.5,
         "grounding_ms": 0.1,
-        "execute_ms": 4629.4,
-        "screenshot_ms": 938.0
+        "execute_ms": 8883.7,
+        "screenshot_ms": 1429.1
       },
       "precondition_ok": true,
       "precondition_detail": "",
-      "subtasks": 4,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "subtasks": 2,
+      "empty_done": 0
     },
     {
       "task": "search_content",
       "title": "搜索指定内容",
       "attempt": 2,
-      "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 10 个：msedge.exe; ✓ 窗口标题命中 'Python 官方文档 - 搜索 - 用户配置 1 - Microsoft\\u200b Edge'",
-      "loop_status": "completed",
-      "model_said_done": true,
-      "steps": 11,
-      "duration_s": 34.9,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210117-8aa989",
-      "error": "",
-      "latency": {
-        "api_ms": 18129.7,
-        "grounding_ms": 0.1,
-        "execute_ms": 3961.8,
-        "screenshot_ms": 1853.3
-      },
-      "precondition_ok": true,
-      "precondition_detail": "",
-      "subtasks": 4,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "search_content",
-      "title": "搜索指定内容",
-      "attempt": 3,
-      "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 9 个：msedge.exe; ✓ 窗口标题命中 'Python 官方文档 - 搜索 - 用户配置 1 - Microsoft\\u200b Edge'",
-      "loop_status": "completed",
-      "model_said_done": true,
-      "steps": 11,
-      "duration_s": 33.4,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210157-df484b",
-      "error": "",
-      "latency": {
-        "api_ms": 17534.0,
-        "grounding_ms": 0.0,
-        "execute_ms": 2200.2,
-        "screenshot_ms": 3546.4
-      },
-      "precondition_ok": true,
-      "precondition_detail": "",
-      "subtasks": 4,
-      "empty_done": 1,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "search_content",
-      "title": "搜索指定内容",
-      "attempt": 4,
-      "verified": true,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 7 个：msedge.exe; ✓ 窗口标题命中 'python 官方文档 - 搜索 和另外 2 个页面 - 用户配置 1 - Microsoft\\u200b Edge'",
-      "loop_status": "subtask_failed",
-      "model_said_done": false,
-      "steps": 15,
-      "duration_s": 51.5,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210235-5194c2",
-      "error": "",
-      "latency": {
-        "api_ms": 24010.0,
-        "grounding_ms": 0.1,
-        "execute_ms": 9729.4,
-        "screenshot_ms": 2040.5
-      },
-      "precondition_ok": true,
-      "precondition_detail": "",
-      "subtasks": 2,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "search_content",
-      "title": "搜索指定内容",
-      "attempt": 5,
       "verified": false,
-      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、Windows PowerShell、Program Manager",
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
       "loop_status": "subtask_failed",
       "model_said_done": false,
-      "steps": 15,
-      "duration_s": 55.9,
+      "steps": 14,
+      "duration_s": 45.2,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210332-5ad66a",
+      "trajectory_id": "traj-20260824-002840-4cd872",
       "error": "",
       "latency": {
-        "api_ms": 26644.1,
+        "api_ms": 19965.2,
         "grounding_ms": 0.2,
-        "execute_ms": 9742.4,
-        "screenshot_ms": 1816.9
+        "execute_ms": 8862.6,
+        "screenshot_ms": 971.2
       },
       "precondition_ok": true,
       "precondition_detail": "",
       "subtasks": 2,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
-      "task": "open_file",
-      "title": "打开指定文件",
-      "attempt": 1,
-      "verified": true,
-      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
-      "loop_status": "subtask_failed",
-      "model_said_done": false,
-      "steps": 22,
-      "duration_s": 63.6,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210433-dbc1b1",
-      "error": "",
-      "latency": {
-        "api_ms": 33596.2,
-        "grounding_ms": 0.0,
-        "execute_ms": 5333.1,
-        "screenshot_ms": 2549.4
-      },
-      "precondition_ok": true,
-      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
-      "subtasks": 6,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "open_file",
-      "title": "打开指定文件",
-      "attempt": 2,
-      "verified": true,
-      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
-      "loop_status": "subtask_failed",
-      "model_said_done": false,
-      "steps": 22,
-      "duration_s": 62.9,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210541-ce7fee",
-      "error": "",
-      "latency": {
-        "api_ms": 32660.7,
-        "grounding_ms": 0.0,
-        "execute_ms": 5295.5,
-        "screenshot_ms": 2867.1
-      },
-      "precondition_ok": true,
-      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
-      "subtasks": 6,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "open_file",
-      "title": "打开指定文件",
+      "task": "search_content",
+      "title": "搜索指定内容",
       "attempt": 3,
-      "verified": true,
-      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
-      "loop_status": "completed",
-      "model_said_done": true,
-      "steps": 14,
-      "duration_s": 40.2,
-      "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210649-0865ba",
-      "error": "",
-      "latency": {
-        "api_ms": 21943.0,
-        "grounding_ms": 0.0,
-        "execute_ms": 2798.2,
-        "screenshot_ms": 2236.6
-      },
-      "precondition_ok": true,
-      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
-      "subtasks": 7,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
-    },
-    {
-      "task": "open_file",
-      "title": "打开指定文件",
-      "attempt": 4,
-      "verified": true,
-      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
+      "verified": false,
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
       "loop_status": "subtask_failed",
       "model_said_done": false,
-      "steps": 25,
-      "duration_s": 74.1,
+      "steps": 14,
+      "duration_s": 44.8,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210734-54e684",
+      "trajectory_id": "traj-20260824-002930-1069ef",
       "error": "",
       "latency": {
-        "api_ms": 37401.2,
+        "api_ms": 19973.4,
         "grounding_ms": 0.1,
-        "execute_ms": 7425.7,
-        "screenshot_ms": 6700.2
+        "execute_ms": 8922.2,
+        "screenshot_ms": 1036.5
+      },
+      "precondition_ok": true,
+      "precondition_detail": "",
+      "subtasks": 2,
+      "empty_done": 0
+    },
+    {
+      "task": "search_content",
+      "title": "搜索指定内容",
+      "attempt": 4,
+      "verified": false,
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 14,
+      "duration_s": 46.5,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003020-59f8aa",
+      "error": "",
+      "latency": {
+        "api_ms": 21395.0,
+        "grounding_ms": 0.1,
+        "execute_ms": 8831.5,
+        "screenshot_ms": 784.0
+      },
+      "precondition_ok": true,
+      "precondition_detail": "",
+      "subtasks": 2,
+      "empty_done": 0
+    },
+    {
+      "task": "search_content",
+      "title": "搜索指定内容",
+      "attempt": 5,
+      "verified": false,
+      "verify_detail": "✓ 进程 'msedge.exe' 应在运行；找到 8 个：msedge.exe; ✗ 没有标题含 'Python.*Edge' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、新建标签页 - 用户配置 1 - Microsoft​ Edge、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
+      "loop_status": "subtask_failed",
+      "model_said_done": false,
+      "steps": 14,
+      "duration_s": 41.8,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003112-ae48e7",
+      "error": "",
+      "latency": {
+        "api_ms": 16592.5,
+        "grounding_ms": 0.1,
+        "execute_ms": 8887.2,
+        "screenshot_ms": 952.3
+      },
+      "precondition_ok": true,
+      "precondition_detail": "",
+      "subtasks": 2,
+      "empty_done": 0
+    },
+    {
+      "task": "open_file",
+      "title": "打开指定文件",
+      "attempt": 1,
+      "verified": true,
+      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 14,
+      "duration_s": 31.5,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003159-172f38",
+      "error": "",
+      "latency": {
+        "api_ms": 15711.3,
+        "grounding_ms": 0.0,
+        "execute_ms": 2765.3,
+        "screenshot_ms": 1897.9
       },
       "precondition_ok": true,
       "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
       "subtasks": 7,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
+    },
+    {
+      "task": "open_file",
+      "title": "打开指定文件",
+      "attempt": 2,
+      "verified": true,
+      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 17,
+      "duration_s": 43.7,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003235-e748bb",
+      "error": "",
+      "latency": {
+        "api_ms": 20720.8,
+        "grounding_ms": 0.1,
+        "execute_ms": 4801.5,
+        "screenshot_ms": 4139.1
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
+      "subtasks": 7,
+      "empty_done": 0
+    },
+    {
+      "task": "open_file",
+      "title": "打开指定文件",
+      "attempt": 3,
+      "verified": true,
+      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 14,
+      "duration_s": 32.3,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003324-ea9f52",
+      "error": "",
+      "latency": {
+        "api_ms": 15498.4,
+        "grounding_ms": 0.0,
+        "execute_ms": 2743.0,
+        "screenshot_ms": 2352.8
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
+      "subtasks": 7,
+      "empty_done": 0
+    },
+    {
+      "task": "open_file",
+      "title": "打开指定文件",
+      "attempt": 4,
+      "verified": true,
+      "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
+      "loop_status": "completed",
+      "model_said_done": true,
+      "steps": 14,
+      "duration_s": 31.9,
+      "cost_cny": 0.0,
+      "trajectory_id": "traj-20260824-003401-13fa22",
+      "error": "",
+      "latency": {
+        "api_ms": 16175.7,
+        "grounding_ms": 0.0,
+        "execute_ms": 2773.3,
+        "screenshot_ms": 2342.0
+      },
+      "precondition_ok": true,
+      "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
+      "subtasks": 7,
+      "empty_done": 0
     },
     {
       "task": "open_file",
@@ -379,23 +348,21 @@
       "verify_detail": "✓ 进程 'notepad.exe' 应在运行；找到 1 个：notepad.exe; ✓ 窗口标题命中 '测试文档.txt - Notepad'",
       "loop_status": "completed",
       "model_said_done": true,
-      "steps": 14,
-      "duration_s": 38.9,
+      "steps": 15,
+      "duration_s": 36.7,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210853-5719c1",
+      "trajectory_id": "traj-20260824-003438-c4ff73",
       "error": "",
       "latency": {
-        "api_ms": 21034.4,
+        "api_ms": 19312.8,
         "grounding_ms": 0.0,
-        "execute_ms": 2774.4,
-        "screenshot_ms": 2239.0
+        "execute_ms": 3443.5,
+        "screenshot_ms": 2315.7
       },
       "precondition_ok": true,
       "precondition_detail": "✓ C:\\agent-test\\测试文档.txt 应存在；实际存在",
       "subtasks": 7,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "send_message",
@@ -412,11 +379,9 @@
       "error": "",
       "latency": {},
       "precondition_ok": false,
-      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：任务栏、Program Manager、Windows PowerShell",
+      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、Program Manager、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
       "subtasks": 0,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "send_message",
@@ -433,11 +398,9 @@
       "error": "",
       "latency": {},
       "precondition_ok": false,
-      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：任务栏、Windows PowerShell、Program Manager",
+      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、此电脑 - 文件资源管理器、Microsoft 365 Copilot、命令提示符",
       "subtasks": 0,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "send_message",
@@ -454,11 +417,9 @@
       "error": "",
       "latency": {},
       "precondition_ok": false,
-      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：任务栏、Program Manager、Windows PowerShell",
+      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、Program Manager、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
       "subtasks": 0,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "send_message",
@@ -475,11 +436,9 @@
       "error": "",
       "latency": {},
       "precondition_ok": false,
-      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：任务栏、Windows PowerShell、Program Manager",
+      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、此电脑 - 文件资源管理器、Microsoft 365 Copilot、命令提示符",
       "subtasks": 0,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "send_message",
@@ -496,11 +455,9 @@
       "error": "",
       "latency": {},
       "precondition_ok": false,
-      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：任务栏、Program Manager、Windows PowerShell",
+      "precondition_detail": "✗ 没有标题含 '测试消息' 的窗口。当前窗口：激活 Windows.转到“设置”以激活 Windows。、任务栏、Program Manager、此电脑 - 文件资源管理器、Microsoft 365 Copilot",
       "subtasks": 0,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "close_app",
@@ -511,22 +468,20 @@
       "loop_status": "completed",
       "model_said_done": true,
       "steps": 2,
-      "duration_s": 7.9,
+      "duration_s": 7.2,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-210958-e06ba0",
+      "trajectory_id": "traj-20260824-003541-5a8593",
       "error": "",
       "latency": {
-        "api_ms": 3413.0,
+        "api_ms": 2687.9,
         "grounding_ms": 0.0,
-        "execute_ms": 701.0,
-        "screenshot_ms": 508.0
+        "execute_ms": 693.9,
+        "screenshot_ms": 1003.8
       },
       "precondition_ok": true,
       "precondition_detail": "✓ 进程 'CalculatorApp.exe' 应在运行；找到 1 个：calculatorapp.exe",
       "subtasks": 1,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "close_app",
@@ -537,22 +492,20 @@
       "loop_status": "completed",
       "model_said_done": true,
       "steps": 2,
-      "duration_s": 8.1,
+      "duration_s": 6.8,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-211014-d7ba1d",
+      "trajectory_id": "traj-20260824-003556-b0ace3",
       "error": "",
       "latency": {
-        "api_ms": 3529.9,
+        "api_ms": 2719.2,
         "grounding_ms": 0.0,
-        "execute_ms": 693.3,
-        "screenshot_ms": 508.6
+        "execute_ms": 684.8,
+        "screenshot_ms": 509.1
       },
       "precondition_ok": true,
       "precondition_detail": "✓ 进程 'CalculatorApp.exe' 应在运行；找到 1 个：calculatorapp.exe",
       "subtasks": 1,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "close_app",
@@ -563,22 +516,20 @@
       "loop_status": "completed",
       "model_said_done": true,
       "steps": 2,
-      "duration_s": 7.9,
+      "duration_s": 6.7,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-211030-852dd8",
+      "trajectory_id": "traj-20260824-003611-7c02c6",
       "error": "",
       "latency": {
-        "api_ms": 3191.3,
+        "api_ms": 2582.1,
         "grounding_ms": 0.0,
-        "execute_ms": 689.0,
-        "screenshot_ms": 508.4
+        "execute_ms": 696.2,
+        "screenshot_ms": 508.7
       },
       "precondition_ok": true,
       "precondition_detail": "✓ 进程 'CalculatorApp.exe' 应在运行；找到 1 个：calculatorapp.exe",
       "subtasks": 1,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "close_app",
@@ -589,22 +540,20 @@
       "loop_status": "completed",
       "model_said_done": true,
       "steps": 2,
-      "duration_s": 8.2,
+      "duration_s": 6.6,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-211046-07af8e",
+      "trajectory_id": "traj-20260824-003626-46e195",
       "error": "",
       "latency": {
-        "api_ms": 3291.5,
+        "api_ms": 2555.0,
         "grounding_ms": 0.0,
-        "execute_ms": 685.8,
-        "screenshot_ms": 508.2
+        "execute_ms": 682.0,
+        "screenshot_ms": 509.0
       },
       "precondition_ok": true,
       "precondition_detail": "✓ 进程 'CalculatorApp.exe' 应在运行；找到 1 个：calculatorapp.exe",
       "subtasks": 1,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     },
     {
       "task": "close_app",
@@ -615,22 +564,20 @@
       "loop_status": "completed",
       "model_said_done": true,
       "steps": 2,
-      "duration_s": 8.2,
+      "duration_s": 6.9,
       "cost_cny": 0.0,
-      "trajectory_id": "traj-20260824-211102-bfbf1f",
+      "trajectory_id": "traj-20260824-003640-6c9af8",
       "error": "",
       "latency": {
-        "api_ms": 3816.0,
+        "api_ms": 2592.4,
         "grounding_ms": 0.0,
-        "execute_ms": 698.9,
-        "screenshot_ms": 510.0
+        "execute_ms": 698.3,
+        "screenshot_ms": 890.8
       },
       "precondition_ok": true,
       "precondition_detail": "✓ 进程 'CalculatorApp.exe' 应在运行；找到 1 个：calculatorapp.exe",
       "subtasks": 1,
-      "empty_done": 0,
-      "excluded": false,
-      "exclusion_reason": ""
+      "empty_done": 0
     }
   ]
 }
