@@ -1,0 +1,52 @@
+# 端到端 GUI 智能体系统原型 v1.0 —— 依赖
+#
+# 分三段。第 1 段跑单元测试，第 2 段跑真机任务，第 3 段接模型。
+#
+# 第 1 段的边界是**实测出来的**（新建空 venv 逐步加包），不是照着 import
+# 语句猜的——第 3 周交付时就是靠猜，结果漏了两个延迟导入的包，在装齐依赖
+# 的机器上跑一百遍也发现不了。本周的实测过程：
+#
+#   pytest/numpy/pillow/pyyaml/langchain-core/opencv/typer/rich
+#                          ->  4 failed（缺 psutil）
+#   + psutil               ->  2 failed（缺截图后端，取不到分辨率）
+#   + mss                  ->  221 passed, 0 skipped
+#
+# psutil 与 mss 一眼看去像是「只有真机才要」，实际单元测试也要：
+# core/verify.py 的进程判据用 psutil，存档要记屏幕分辨率所以要截图后端。
+
+# --- 1. 单元测试必需 ---
+pytest>=8.0
+pytest-cov>=5.0
+numpy>=1.24                # perception.types / capture 的数组运算
+pillow>=10.0               # 截图对象
+pyyaml>=6.0                # 任务清单与提示词模板都是 YAML
+langchain-core>=0.3.0      # llm/openai_compat.py 组装多模态消息
+opencv-python>=4.9         # llm/openai_compat.py 把截图编码成 data URL
+typer>=0.12                # cli/main.py 的命令行框架
+rich>=13.0                 # cli/panel.py 的实时面板
+psutil>=5.9                # core/verify.py 的进程判据（单测也要）
+mss>=9.0                   # 截图后端；存档要记分辨率，单测也要
+
+# --- 2. 真机执行（客机内）---
+# 这一段只在虚拟机客机里需要。**Agent 的一切键鼠执行只发生在隔离客机内**
+# （M0 全局约束 1），宿主机上装了也不该用来跑 --execute。
+pyautogui>=0.9.54          # 鼠标键盘执行
+pyperclip>=1.8             # 中文输入走剪贴板（pyautogui 无法直接输入中文）
+dxcam>=0.0.5 ; sys_platform == "win32"    # Windows 低延迟截图，缺失时降级到 mss
+pynput>=1.7                # 全局热键急停
+pywinauto>=0.6.8 ; sys_platform == "win32"    # 窗口标题判据
+comtypes>=1.2 ; sys_platform == "win32"
+
+# --- 3. 模型通路（二选一或都装）---
+# 3a. API 调用
+langchain>=0.3.0
+langchain-openai>=0.2.0
+python-dotenv>=1.0         # 从 .env 读凭据；**仓库内不得出现任何 API Key**
+
+# 3b. 本地部署（只有要在本机加载 Qwen2.5-VL 时才需要，体积很大）
+torch>=2.4
+transformers>=4.45
+accelerate>=0.34
+bitsandbytes>=0.43         # 4-bit NF4 量化加载
+peft>=0.13                 # LoRA 适配器加载
+qwen-vl-utils>=0.0.8       # smart_resize 与视觉输入预处理

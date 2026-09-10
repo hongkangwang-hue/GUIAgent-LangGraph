@@ -1,0 +1,136 @@
+{
+  "trajectories": 5,
+  "steps": 16,
+  "counts": {
+    "planner_bad": 1,
+    "stuck_loop": 6,
+    "premature_done": 9,
+    "app_state": 11
+  },
+  "combos": {
+    "planner_bad": 1,
+    "stuck_loop": 4,
+    "app_state + premature_done": 9,
+    "app_state + stuck_loop": 2
+  },
+  "unknown": [],
+  "by_trajectory": {
+    "traj-20260824-094416-aa40f0": [
+      [
+        6,
+        [
+          "planner_bad"
+        ]
+      ],
+      [
+        12,
+        [
+          "stuck_loop"
+        ]
+      ],
+      [
+        15,
+        [
+          "stuck_loop"
+        ]
+      ]
+    ],
+    "traj-20260824-003235-e748bb": [
+      [
+        11,
+        [
+          "stuck_loop"
+        ]
+      ]
+    ],
+    "traj-20260824-002840-4cd872": [
+      [
+        4,
+        [
+          "stuck_loop"
+        ]
+      ]
+    ],
+    "traj-20260824-000604-51e9e7": [
+      [
+        1,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        2,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        3,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        4,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        5,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        6,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        7,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ]
+    ],
+    "traj-20260824-000052-318cbe": [
+      [
+        2,
+        [
+          "app_state",
+          "stuck_loop"
+        ]
+      ],
+      [
+        4,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        5,
+        [
+          "premature_done",
+          "app_state"
+        ]
+      ],
+      [
+        9,
+        [
+          "stuck_loop",
+          "app_state"
+        ]
+      ]
+    ]
+  }
+}

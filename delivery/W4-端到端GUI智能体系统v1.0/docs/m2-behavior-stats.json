@@ -1,0 +1,283 @@
+{
+  "trajectories": 8,
+  "steps": 102,
+  "subtasks": 33,
+  "empty_done_subtasks": 6,
+  "repeat_steps": 43,
+  "max_repeat_run": 12,
+  "consecutive_done": 6,
+  "actions": {
+    "left_click": 61,
+    "（无动作·done）": 30,
+    "type": 9,
+    "key": 2
+  },
+  "execution_status": {
+    "ok": 72,
+    "no_action": 30
+  },
+  "grounding_source": {
+    "native": 61,
+    "-": 30,
+    "skipped": 11
+  },
+  "by_instruction": {
+    "在「测试消息」程序里发送一条内容为「你好世界」的": {
+      "n": 5,
+      "steps": 96,
+      "repeats": 43
+    },
+    "关闭计算器窗口": {
+      "n": 3,
+      "steps": 6,
+      "repeats": 0
+    }
+  },
+  "worst": [
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 15,
+      "run": 4,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 16,
+      "run": 5,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 17,
+      "run": 6,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 18,
+      "run": 7,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 19,
+      "run": 8,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 20,
+      "run": 9,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 21,
+      "run": 10,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 22,
+      "run": 11,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-100023-e2fda9",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 23,
+      "run": 12,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 13,
+      "run": 4,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 14,
+      "run": 5,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 15,
+      "run": 6,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 16,
+      "run": 7,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 17,
+      "run": 8,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 18,
+      "run": 9,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 19,
+      "run": 10,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 20,
+      "run": 11,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095538-d9518f",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 21,
+      "run": 12,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 13,
+      "run": 4,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 14,
+      "run": 5,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 15,
+      "run": 6,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 16,
+      "run": 7,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 17,
+      "run": 8,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 18,
+      "run": 9,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 19,
+      "run": 10,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 20,
+      "run": 11,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-095047-b006ef",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 21,
+      "run": 12,
+      "action": "left_click|@15,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 14,
+      "run": 4,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 15,
+      "run": 5,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 16,
+      "run": 6,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 17,
+      "run": 7,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 18,
+      "run": 8,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 19,
+      "run": 9,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 20,
+      "run": 10,
+      "action": "left_click|@16,23"
+    },
+    {
+      "trajectory": "traj-20260824-094416-aa40f0",
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "step": 21,
+      "run": 11,
+      "action": "left_click|@16,23"
+    }
+  ]
+}

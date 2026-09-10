@@ -1,0 +1,40 @@
+[project]
+name = "gui-agent-w4"
+version = "1.0.0"
+description = "端到端 GUI 智能体系统原型 v1.0（第 4 周交付）"
+requires-python = ">=3.10"
+
+# **必须与源仓库一致（行宽 100）。** 不写这一段的话，ruff 找到的最近配置
+# 就是本文件，退回默认的 88 字符，于是把这里的代码重排成和源仓库不同的
+# 样子——交付副本与源码逐字对不上，评审时无从判断哪份是真的。
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "windows: 需要真实 Windows 桌面，CI 上跳过",
+    "gpu: 需要可用 GPU",
+    "slow: 耗时较长（模型推理等）",
+]
+
+[tool.coverage.run]
+# 只统计**本周交付的两个包**。src/ 下另有 agent、llm、grounding、control、
+# perception、finetune 六个包，分属第 2、3、5 周，是为了让本包能独立
+# import 才一并提供的，计进来会把本周的覆盖率稀释成一个没有意义的数
+# （见 README §三 偏差 3）。
+source = ["core", "cli"]
+omit = [
+    "*/__init__.py",
+    "*/cli/__main__.py",
+    # reflector.py 属于第 6 周交付（错误检测与自动重试），其 17 条测试在
+    # 主仓库的 tests/test_reflector.py。它在 core 包里，随包一起提供，
+    # 但**不计入本周的覆盖率**——否则会以 66% 拉低本周的数，那是误导。
+    "*/core/reflector.py",
+]

@@ -1,0 +1,251 @@
+# M2 基础任务集 —— 大纲第 4 周点名的 5 个任务
+#
+# 每个任务三段式：
+#   instruction    交给 Agent 的自然语言指令
+#   success_check  程序化判定（进程 / 窗口标题 / 文件内容）
+#   reset          跑之前把环境恢复到已知初始状态
+#
+# ## 为什么每个任务都要 reset
+#
+# M2 要求每任务跑 5 次算成功率。若第三次开始时环境已与第一次不同，
+# 这 5 次的数据就不可比。reset 让每一轮从同一个起点开始。
+#
+# 快照能做整机重置，但那要关机 / 恢复 / 开机，一轮几分钟。任务级 reset
+# 快得多，够用；快照留给「环境被搞乱了」的兜底。
+#
+# ## reset 必须恢复**屏幕**，不只是数据
+#
+# 第一次 5×5 实测栽在这上面。`send_message` 的 reset 原本只清空
+# messages.log，没关上一个任务留下的记事本。于是 Agent 面对的屏幕上
+# 摆着一个记事本窗口，它整条轨迹都在说「记事本已打开」，把「你好世界」
+# 输进了记事本，5 轮全挂。
+#
+# 屏幕就是 Agent 的全部输入。上一轮遗留的窗口是**下一轮的输入的一部分**，
+# 不清掉，5 轮之间就不独立，成功率不可比。
+#
+# 所以每个任务的 reset 都先把不属于自己的应用关干净，
+# 让每一轮从同一张桌面开始。
+#
+# ## 但 taskkill 清不干净
+#
+# 实测连续撞了三种它够不着的残留：
+#
+#   记事本的会话恢复      状态在磁盘上，杀了再启动会原样恢复
+#   开始菜单 / 搜索浮层   系统 UI，不属于任何可杀的进程
+#   帐户登录模态框        盖住半个屏幕，taskkill 碰不到
+#
+# 第三种最贵：Copilot 固定在任务栏上紧挨着 Edge，模型点岔一次就拉起一个
+# 登录框，然后「搜索指定内容」连续四轮以完全相同的方式失败——17 步、
+# 同一个终止原因，Agent 对着登录框按了 12 次回车。
+#
+# 所以 reset 的第一条统一是 `tasks/reset_desktop.py`：Esc 关浮层、
+# Win+D 最小化所有窗口、杀掉不属于测试环境的常驻应用。
+#
+# **根本解法仍是快照恢复。** 上面这些只是把任务级 reset 的覆盖面往前推
+# 一截，推不到头。M5 的 60 轮正式评测要用快照。
+#
+# ## precondition：防止「起点没建立」被算成成功
+#
+# reset 不一定成功。`start calc` 可能因为计算器没装、启动慢过
+# `timeout /t 3`、或被系统策略挡住而没起来——而「关闭应用」的判据是
+# **进程应已退出**，计算器压根没启动时它会直接打勾。Agent 什么都没做，
+# 这一轮却记成成功。
+#
+# 演练时就撞见了这个：reset 是空跑的，close_app 的判据当场 ✓。
+#
+# 所以 reset 之后、Agent 开跑之前，先验一次起点是否真的建立了。
+# 没建立的轮次记为 **invalid**，不进成功率的分子也不进分母——
+# 那不是 Agent 的失败，是环境的失败，混在一起两个数字都不可信。
+#
+# ## 判据为什么常常是两条
+#
+# 多条判据不是保险，是**堵住不同的伪成功**。以「打开指定文件」为例：
+#   只查进程     → 记事本开着但没打开那个文件，也算成功
+#   只查窗口标题 → 标题对，但可能是人手工开的
+# 两条同时要求才排除得掉。
+
+version: 1
+description: M2 基础任务集，5 个任务 × 5 次
+
+# 所有任务共用的测试目录。**客机内必须先跑 tasks/setup_env.py 建好。**
+env:
+  test_dir: C:/agent-test
+  message_log: C:/agent-test/messages.log
+  test_file: C:/agent-test/测试文档.txt
+
+tasks:
+  # ------------------------------------------------------------------ #
+  - name: open_browser
+    title: 打开浏览器
+    difficulty: 单步
+    instruction: 打开 Microsoft Edge 浏览器
+    max_steps: 6
+    # 判据只查进程。窗口标题在这里不可靠——Edge 首次启动可能停在
+    # 「欢迎」「导入数据」等不同页面上，标题不固定，而任务要的只是
+    # 「浏览器起来了」。
+    success_check:
+      - type: process
+        name: msedge.exe
+        should_run: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    # **反方向的起点检查。** 判据是「msedge 应在运行」，那么起点就必须是
+    # 「msedge 没在运行」——taskkill 失败（进程挂起、被策略挡住）时，
+    # 这一轮开局浏览器就开着，Agent 什么都不做判据也会打勾。
+    #
+    # 原来只有「关闭应用」查了这个方向，另外三个任务都没查。而**假成功
+    # 恰恰全都来自这个方向**：起点没清干净，判据一上来就满足。
+    precondition:
+      - type: process
+        name: msedge.exe
+        should_run: false
+    note: >
+      大纲点名的单步任务之一，M2 验收标准 2 期望接近 100%。
+      若这条都过不去，说明感知或控制链路有问题，而非模型能力问题。
+
+  # ------------------------------------------------------------------ #
+  - name: search_content
+    title: 搜索指定内容
+    difficulty: 多步
+    instruction: 打开 Microsoft Edge，在地址栏搜索「Python 官方文档」
+    max_steps: 12
+    # 标题判据用 regex，因为搜索引擎会把查询词嵌进标题，
+    # 但前后缀（"- 搜索"、"- Bing"、"- Microsoft​ Edge"）各版本不同。
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: msedge.exe
+          should_run: true
+        # **不能只写 "Python"。** 实测里它匹配到了评测脚本自己的命令行
+        # 窗口标题（"命令提示符 - python  scripts\run_basic_tasks.py ..."），
+        # 把一次失败判成了成功。core/verify.py 已经跳过自己的控制台，
+        # 这里再收紧一层：要求查询词与 Edge 同时出现在标题里。
+        - type: window_title
+          pattern: "Python.*Edge"
+          regex: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    # 同 open_browser：判据要「msedge 在运行」，起点就得「msedge 没在运行」。
+    precondition:
+      - type: process
+        name: msedge.exe
+        should_run: false
+    note: >
+      需要网络。客机走 NAT 可以联网。搜索结果页内容会变，
+      但标题里含查询词这一点是稳定的。
+
+  # ------------------------------------------------------------------ #
+  - name: open_file
+    title: 打开指定文件
+    difficulty: 多步
+    instruction: 用记事本打开 C:\agent-test\测试文档.txt
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: notepad.exe
+          should_run: true
+        - type: window_title
+          pattern: "测试文档"
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    # 目标文件不存在（setup_env.py 没跑）时任务不可能完成，
+    # 那是环境问题不是能力问题。
+    precondition:
+      - type: file_exists
+        path: C:/agent-test/测试文档.txt
+      # **这一条是补一次真实事故。** 「打开指定文件」曾经从 0% 跳到 100%，
+      # 原因是记事本的会话恢复：taskkill 之后重开，Windows 会把上一次的
+      # 标签页恢复回来，于是「notepad 在运行 + 标题含测试文档」两条判据
+      # 一开局就满足，Agent 一个动作都没做也算成功。
+      #
+      # 那次是靠人眼看出来的。加上这条，同样的情况会被记成无效轮。
+      - type: process
+        name: notepad.exe
+        should_run: false
+    note: >
+      文件由 setup_env.py 预置，内容固定。两条判据缺一不可，
+      理由见文件头。
+
+  # ------------------------------------------------------------------ #
+  - name: send_message
+    title: 发送消息
+    difficulty: 多步
+    instruction: 在「测试消息」程序里发送一条内容为「你好世界」的消息
+    max_steps: 12
+    # **这是最可靠的一条判据**：查的是任务真正产生的副作用（写进文件的
+    # 那行字），不受窗口 Z 序、焦点、渲染时机影响。
+    success_check:
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 你好世界
+    reset:
+      # 先清场：上一轮留下的记事本会让模型整条轨迹都以为自己在操作记事本。
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/mock_messenger_reset.py
+    # 消息程序由人在另一个窗口里常驻。它要是关了，这一轮不是 Agent
+    # 做不到，是环境没准备好——记 invalid，别记失败。
+    precondition:
+      - type: window_title
+        pattern: 测试消息
+      # 日志必须是干净的。`mock_messenger_reset.py` 负责清空它，但那一步
+      # 可能失败（文件被占用、路径不存在）——而判据是「日志含你好世界」，
+      # 上一轮的内容留着的话，Agent 什么都不做就打勾了。
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 你好世界
+        should_contain: false
+    note: >
+      操作对象是 tasks/mock_messenger.py —— 本地模拟程序，消息只写本地
+      文件。不用真实聊天软件：那需要登录真实账号（违反 M0 数据边界），
+      且会向真人发出不可撤销的消息。
+
+  # ------------------------------------------------------------------ #
+  - name: close_app
+    title: 关闭应用
+    difficulty: 单步
+    instruction: 关闭计算器窗口
+    max_steps: 6
+    # 判据是**进程消失**，不是「点到了关闭按钮」。后者用截图也能看，
+    # 但点了不一定真关掉（可能弹了确认框、可能点到了最小化）。
+    success_check:
+      - type: process
+        name: CalculatorApp.exe
+        should_run: false
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      # **先杀干净再开一个。** 原来只有 start calc，Agent 关不掉时旧的会
+      # 留着，于是第 N 轮的起点是 N 个计算器 —— 而 reset 存在的全部理由
+      # 就是让每轮起点相同。2026-08-24 离线-基座组实测到「找到 6 个 →
+      # 7 个 → 8 个 → 9 个」逐轮递增，五轮下来最后一轮和第一轮已经不是
+      # 同一个实验了。
+      - taskkill /F /IM CalculatorApp.exe /T
+      - start calc
+      # **轮询而不是死等 3 秒。** 计算器是 UWP 应用，刚被 taskkill 干掉
+      # 之后的冷启动经常超过 3 秒。2026-08-25 离线-微调组实测：25 轮里
+      # 第 1 轮起点未建立、后面 4 轮都过，正是冷启动慢的形态。
+      #
+      # 而无效轮**不进分母**，于是这批的分母会从 5 悄悄变成 4——
+      # 一个纯粹由等待时间造成的、看不出来的样本损失。
+      - python tasks/wait_for_process.py CalculatorApp.exe
+    # 没有这一条，计算器没启动时判据会直接打勾（见文件头）。
+    precondition:
+      - type: process
+        name: CalculatorApp.exe
+        should_run: true
+    note: >
+      大纲点名的另一个单步任务。reset 负责把计算器打开，
+      否则「关闭它」这个任务没有起点。
+      注意 Windows 11 的计算器进程名是 CalculatorApp.exe，不是 calc.exe。
