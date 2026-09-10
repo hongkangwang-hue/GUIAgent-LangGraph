@@ -217,8 +217,23 @@ sys.path.insert(
 `No module named cli`。`gui-agent.py` 把 `src` 加进 `sys.path` 再转交给
 `cli.main`，让命令行用法与源仓库一致。文件开头写明了它是交付包专用。
 
-**以上就是交付副本与源码之间的全部差异**（三个脚本各 +3 行、新增一个入口
-文件），其余文件与源仓库逐字一致，已用逐文件二进制比对核过。
+还有一处：`基础任务测试报告.md`（315 行）是**为交付改写的汇报版**，与源仓库
+的 `docs/m2-basic-tasks-report.md`（607 行）内容不同。两者的数据完全一样，
+差别在写法——源仓库那份是 M2 阶段一路记下来的工程日志，含四轮测量的完整
+推导过程与逐条交叉引用；交付这份重新组织成十节，并把单元测试的内容并进
+第八节（大纲第 4 周只要求一份「基础任务测试报告」，不要求单元测试报告）。
+**报告里的每个数字都没有改动**，都能用 `docs/m2-runs/` 下的原始数据重算。
+
+**以上就是交付副本与源码之间的全部差异**：
+
+| 类型 | 文件 |
+|---|---|
+| 源仓库没有的 | `README.md`、`pyproject.toml`、`requirements.txt`、`gui-agent.py` |
+| 同名但改了 | `scripts/run_basic_tasks.py`、`scripts/compare_runs.py`、`tasks/wait_for_process.py`（各 +3 行 path） |
+| 改写的 | `基础任务测试报告.md` |
+
+`src/`、`tests/`、`tasks/`（除 `wait_for_process.py`）、`docs/` 下的全部文件
+与源仓库逐字一致，已用逐文件二进制比对核过。
 
 ### 6. CLI 两个模块的覆盖率偏低（58% / 55%）
 
