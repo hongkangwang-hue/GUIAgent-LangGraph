@@ -121,7 +121,7 @@ API 调用。`llm/providers.py` 的 `weights_local` 字段就是记这件事的�
 
 ```bash
 cd <本目录>
-pip install -r requirements.txt          # 跑测试装第 1 段（1a+1b+1c）即可
+pip install -r requirements.txt          # 十来个包，约 410MB，约 50 秒
 python -m pytest                         # 369 passed in 4.22s
 python -m pytest --cov=data --cov=llm --cov=agent --cov-report=term-missing
 ```
@@ -261,7 +261,8 @@ W3-数据集处理与Agent框架/
 ├── README.md                     本文件
 ├── 单元测试报告.md                369 个用例的实测记录与覆盖率分析
 ├── pyproject.toml                pytest / ruff / 覆盖率配置
-├── requirements.txt              依赖清单（四段，按用途分）
+├── requirements.txt              跑测试的依赖（边界经实测确认）
+├── requirements-full.txt         数据集预处理与模型通路的依赖（含 torch）
 ├── src/
 │   ├── data/                     ← 本周交付：数据集处理（6 模块 + 3 个 loader）
 │   │   ├── schema.py                 统一样本结构，整条数据链的单一真相来源

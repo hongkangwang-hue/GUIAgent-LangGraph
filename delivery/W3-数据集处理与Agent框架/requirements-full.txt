@@ -1,0 +1,34 @@
+﻿# 公开 GUI 数据集处理与基础 Agent 框架 —— 数据集预处理与模型通路的依赖
+#
+# **跑单元测试不需要这份**，只装 `requirements.txt` 就够。
+# 这份体积以 GB 计，且第 3b 段的 bitsandbytes 在没有 CUDA 的机器上可能装不上。
+#
+#     pip install -r requirements.txt        # 先装测试依赖
+#     pip install -r requirements-full.txt   # 再按需装这份
+
+-r requirements.txt
+
+# --- 2. 数据集预处理（scripts/prepare_datasets.py）---
+# pandas / pyarrow / matplotlib 见第 1c 段，此处不重复。
+datasets>=2.19             # Hugging Face 数据集装载
+huggingface-hub>=0.23      # 下载 ScreenSpot / ScreenSpot-v2
+requests>=2.31             # survey_web_datasets.py 走 datasets-server /rows API
+
+# --- 3. API 调用通路（大纲第 3 周任务 4 前半）---
+# 大纲点名 LangChain。llm/openai_compat.py 走 langchain_openai.ChatOpenAI，
+# 见 README §三 偏差 1 说明为什么没有引入 LangChain 的 Agent/Chain 抽象。
+langchain>=0.3.0
+langchain-openai>=0.2.0
+python-dotenv>=1.0         # 从 .env 读凭据；**仓库内不得出现任何 API Key**
+
+# --- 4. 本地部署通路（大纲第 3 周任务 4 后半）---
+# 只有真的要在本机加载 Qwen2.5-VL 时才需要，体积很大。
+# 不装的话 llm/qwen_vl_local.py 仍可 import，只是构造后端时报缺依赖。
+torch>=2.4
+transformers>=4.45
+accelerate>=0.34
+bitsandbytes>=0.43         # 4-bit NF4 量化加载
+peft>=0.13                 # LoRA 适配器加载
+qwen-vl-utils>=0.0.8       # smart_resize 与视觉输入预处理
+fastapi>=0.115             # scripts/serve_local_model.py 暴露 OpenAI 兼容接口
+uvicorn>=0.30

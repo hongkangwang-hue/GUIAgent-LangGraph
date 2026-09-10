@@ -86,7 +86,7 @@
 
 ```bash
 cd <本目录>
-pip install -r requirements.txt          # 跑测试装第 1 段即可
+pip install -r requirements.txt          # 十来个包，约 240MB，20~40 秒
 python -m pytest                         # 221 passed in 3.08s
 python -m pytest --cov=core --cov=cli --cov-report=term-missing
 ```
@@ -228,7 +228,7 @@ sys.path.insert(
 
 | 类型 | 文件 |
 |---|---|
-| 源仓库没有的 | `README.md`、`pyproject.toml`、`requirements.txt`、`gui-agent.py` |
+| 源仓库没有的 | `README.md`、`pyproject.toml`、`requirements.txt`、`requirements-full.txt`、`gui-agent.py` |
 | 同名但改了 | `scripts/run_basic_tasks.py`、`scripts/compare_runs.py`、`tasks/wait_for_process.py`（各 +3 行 path） |
 | 改写的 | `基础任务测试报告.md` |
 
@@ -251,7 +251,8 @@ W4-端到端GUI智能体系统v1.0/
 ├── gui-agent.py                  命令行入口（**交付包专用**，见 §三 偏差 5）
 ├── 基础任务测试报告.md            **交付物之二**：五个任务的实测结果 + 单元测试
 ├── pyproject.toml                pytest / ruff / 覆盖率配置
-├── requirements.txt              依赖清单（三段，第 1 段边界经实测确认）
+├── requirements.txt              跑测试的依赖（边界经实测确认）
+├── requirements-full.txt         真机执行与模型通路的依赖（含 torch，体积以 GB 计）
 ├── src/
 │   ├── core/                 ← 本周交付：执行闭环（6 模块）
 │   │   ├── loop.py               Agent Loop，把五个环节串起来
