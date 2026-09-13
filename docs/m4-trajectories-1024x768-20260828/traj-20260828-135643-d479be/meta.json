@@ -1,0 +1,116 @@
+{
+  "trajectory_id": "traj-20260828-135643-d479be",
+  "instruction": "打开 Microsoft Edge，在地址栏搜索「Python 官方文档」",
+  "subtasks": [
+    "点击任务栏的开始按钮",
+    "在搜索框输入\"Microsoft Edge\"",
+    "按回车键启动Microsoft Edge",
+    "点击地址栏输入文本框",
+    "在地址栏输入网址\"https://docs.python.org/3/\"并回车"
+  ],
+  "started_at": "2026-08-28T13:56:43",
+  "finished_at": "2026-08-28T13:57:45",
+  "status": "success",
+  "backend": "selfhost",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "grounding_backend": "native",
+  "mode": "A",
+  "total_steps": 9,
+  "total_cost_cny": 0.0,
+  "total_tokens": 22519,
+  "duration_s": 61.63,
+  "verified": null,
+  "verify_note": "",
+  "screen_region": [],
+  "model_space": {},
+  "environment": {
+    "dpi": {
+      "platform": "win32",
+      "dpi_aware": true,
+      "system_dpi": 96,
+      "scale_factor": 1.0,
+      "session_dpi": 96
+    },
+    "capture_engine": "dxcam",
+    "resolution": "1024x768"
+  },
+  "error": "",
+  "meta": {
+    "planner_template": "planner_v1",
+    "executor_template": "executor_v0",
+    "plan_with_screenshot": true,
+    "space_name": "planner",
+    "image_size": [
+      1024,
+      768
+    ],
+    "allowed_actions": [],
+    "escalate_on_no_change": false,
+    "reflector": false,
+    "reflector_max_rejects": 2,
+    "coordinate_space": [
+      1000,
+      1000
+    ],
+    "max_iterations": 12,
+    "cost_limit_cny": 1.0,
+    "settle_seconds": 0.8,
+    "dry_run": false,
+    "context": {
+      "k": 3,
+      "full_res_steps": 1,
+      "downscale": 0.5,
+      "image_steps": 2
+    },
+    "plan": {
+      "instruction": "打开 Microsoft Edge，在地址栏搜索「Python 官方文档」",
+      "subtasks": [
+        {
+          "id": 1,
+          "goal": "点击任务栏的开始按钮",
+          "expected": "开始菜单展开，出现搜索框"
+        },
+        {
+          "id": 2,
+          "goal": "在搜索框输入\"Microsoft Edge\"",
+          "expected": "搜索结果里出现Microsoft Edge应用"
+        },
+        {
+          "id": 3,
+          "goal": "按回车键启动Microsoft Edge",
+          "expected": "出现Microsoft Edge浏览器窗口"
+        },
+        {
+          "id": 4,
+          "goal": "点击地址栏输入文本框",
+          "expected": "地址栏输入框出现，可以输入网址"
+        },
+        {
+          "id": 5,
+          "goal": "在地址栏输入网址\"https://docs.python.org/3/\"并回车",
+          "expected": "网页加载成功，显示Python官方文档页面"
+        }
+      ],
+      "prompt": {
+        "name": "planner_v1",
+        "version": "v1",
+        "features": [
+          "role_setting",
+          "granularity_constraint",
+          "few_shot"
+        ],
+        "few_shot_count": 2
+      },
+      "truncated": 0,
+      "cost_cny": 0.0
+    },
+    "granularity_warnings": [
+      {
+        "id": 4,
+        "rule": "multi_verb",
+        "detail": "出现多个动作词 ['点击', '输入']",
+        "goal": "点击地址栏输入文本框"
+      }
+    ]
+  }
+}

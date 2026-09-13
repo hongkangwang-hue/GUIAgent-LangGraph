@@ -1,0 +1,85 @@
+{
+  "trajectory_id": "traj-20260828-140831-a2f594",
+  "instruction": "关闭计算器窗口",
+  "subtasks": [
+    "点击计算器窗口右上角的关闭按钮"
+  ],
+  "started_at": "2026-08-28T14:08:31",
+  "finished_at": "2026-08-28T14:08:47",
+  "status": "success",
+  "backend": "selfhost",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "grounding_backend": "native",
+  "mode": "A",
+  "total_steps": 2,
+  "total_cost_cny": 0.0,
+  "total_tokens": 6535,
+  "duration_s": 16.17,
+  "verified": null,
+  "verify_note": "",
+  "screen_region": [],
+  "model_space": {},
+  "environment": {
+    "dpi": {
+      "platform": "win32",
+      "dpi_aware": true,
+      "system_dpi": 96,
+      "scale_factor": 1.0,
+      "session_dpi": 96
+    },
+    "capture_engine": "dxcam",
+    "resolution": "1024x768"
+  },
+  "error": "",
+  "meta": {
+    "planner_template": "planner_v1",
+    "executor_template": "executor_v0",
+    "plan_with_screenshot": true,
+    "space_name": "planner",
+    "image_size": [
+      1024,
+      768
+    ],
+    "allowed_actions": [],
+    "escalate_on_no_change": false,
+    "reflector": false,
+    "reflector_max_rejects": 2,
+    "coordinate_space": [
+      1000,
+      1000
+    ],
+    "max_iterations": 6,
+    "cost_limit_cny": 1.0,
+    "settle_seconds": 0.8,
+    "dry_run": false,
+    "context": {
+      "k": 3,
+      "full_res_steps": 1,
+      "downscale": 0.5,
+      "image_steps": 2
+    },
+    "plan": {
+      "instruction": "关闭计算器窗口",
+      "subtasks": [
+        {
+          "id": 1,
+          "goal": "点击计算器窗口右上角的关闭按钮",
+          "expected": "计算器窗口关闭，恢复桌面"
+        }
+      ],
+      "prompt": {
+        "name": "planner_v1",
+        "version": "v1",
+        "features": [
+          "role_setting",
+          "granularity_constraint",
+          "few_shot"
+        ],
+        "few_shot_count": 2
+      },
+      "truncated": 0,
+      "cost_cny": 0.0
+    },
+    "granularity_warnings": []
+  }
+}

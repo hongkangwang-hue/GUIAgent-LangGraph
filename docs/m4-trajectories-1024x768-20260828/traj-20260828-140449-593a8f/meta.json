@@ -1,0 +1,97 @@
+{
+  "trajectory_id": "traj-20260828-140449-593a8f",
+  "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+  "subtasks": [
+    "点击消息输入框",
+    "输入文本\"你好世界\"",
+    "点击发送按钮"
+  ],
+  "started_at": "2026-08-28T14:04:49",
+  "finished_at": "2026-08-28T14:05:32",
+  "status": "success",
+  "backend": "selfhost",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "grounding_backend": "native",
+  "mode": "A",
+  "total_steps": 6,
+  "total_cost_cny": 0.0,
+  "total_tokens": 15919,
+  "duration_s": 43.01,
+  "verified": null,
+  "verify_note": "",
+  "screen_region": [],
+  "model_space": {},
+  "environment": {
+    "dpi": {
+      "platform": "win32",
+      "dpi_aware": true,
+      "system_dpi": 96,
+      "scale_factor": 1.0,
+      "session_dpi": 96
+    },
+    "capture_engine": "dxcam",
+    "resolution": "1024x768"
+  },
+  "error": "",
+  "meta": {
+    "planner_template": "planner_v1",
+    "executor_template": "executor_v0",
+    "plan_with_screenshot": true,
+    "space_name": "planner",
+    "image_size": [
+      1024,
+      768
+    ],
+    "allowed_actions": [],
+    "escalate_on_no_change": false,
+    "reflector": false,
+    "reflector_max_rejects": 2,
+    "coordinate_space": [
+      1000,
+      1000
+    ],
+    "max_iterations": 12,
+    "cost_limit_cny": 1.0,
+    "settle_seconds": 0.8,
+    "dry_run": false,
+    "context": {
+      "k": 3,
+      "full_res_steps": 1,
+      "downscale": 0.5,
+      "image_steps": 2
+    },
+    "plan": {
+      "instruction": "在「测试消息」程序里发送一条内容为「你好世界」的消息",
+      "subtasks": [
+        {
+          "id": 1,
+          "goal": "点击消息输入框",
+          "expected": "输入框聚焦，提示符变为\"输入消息...\""
+        },
+        {
+          "id": 2,
+          "goal": "输入文本\"你好世界\"",
+          "expected": "输入框内显示\"你好世界\""
+        },
+        {
+          "id": 3,
+          "goal": "点击发送按钮",
+          "expected": "发送按钮变为灰色，提示\"消息已发送\""
+        }
+      ],
+      "prompt": {
+        "name": "planner_v1",
+        "version": "v1",
+        "features": [
+          "role_setting",
+          "granularity_constraint",
+          "few_shot"
+        ],
+        "few_shot_count": 2
+      },
+      "truncated": 0,
+      "cost_cny": 0.0
+    },
+    "granularity_warnings": []
+  }
+}

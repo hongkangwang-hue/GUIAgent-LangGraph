@@ -1,0 +1,115 @@
+{
+  "trajectory_id": "traj-20260828-135750-8e1dce",
+  "instruction": "用记事本打开 C:\\agent-test\\测试文档.txt",
+  "subtasks": [
+    "点击任务栏的开始按钮",
+    "在搜索框输入\"记事本\"",
+    "按回车键启动记事本",
+    "点击记事本的编辑区域",
+    "输入文件路径 \"C:\\agent-test\\测试文档.txt\"",
+    "按回车键打开文件"
+  ],
+  "started_at": "2026-08-28T13:57:50",
+  "finished_at": "2026-08-28T13:59:07",
+  "status": "success",
+  "backend": "selfhost",
+  "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "grounding_backend": "native",
+  "mode": "A",
+  "total_steps": 12,
+  "total_cost_cny": 0.0,
+  "total_tokens": 30068,
+  "duration_s": 77.33,
+  "verified": null,
+  "verify_note": "",
+  "screen_region": [],
+  "model_space": {},
+  "environment": {
+    "dpi": {
+      "platform": "win32",
+      "dpi_aware": true,
+      "system_dpi": 96,
+      "scale_factor": 1.0,
+      "session_dpi": 96
+    },
+    "capture_engine": "dxcam",
+    "resolution": "1024x768"
+  },
+  "error": "",
+  "meta": {
+    "planner_template": "planner_v1",
+    "executor_template": "executor_v0",
+    "plan_with_screenshot": true,
+    "space_name": "planner",
+    "image_size": [
+      1024,
+      768
+    ],
+    "allowed_actions": [],
+    "escalate_on_no_change": false,
+    "reflector": false,
+    "reflector_max_rejects": 2,
+    "coordinate_space": [
+      1000,
+      1000
+    ],
+    "max_iterations": 12,
+    "cost_limit_cny": 1.0,
+    "settle_seconds": 0.8,
+    "dry_run": false,
+    "context": {
+      "k": 3,
+      "full_res_steps": 1,
+      "downscale": 0.5,
+      "image_steps": 2
+    },
+    "plan": {
+      "instruction": "用记事本打开 C:\\agent-test\\测试文档.txt",
+      "subtasks": [
+        {
+          "id": 1,
+          "goal": "点击任务栏的开始按钮",
+          "expected": "开始菜单展开，出现搜索框"
+        },
+        {
+          "id": 2,
+          "goal": "在搜索框输入\"记事本\"",
+          "expected": "搜索结果里出现记事本应用"
+        },
+        {
+          "id": 3,
+          "goal": "按回车键启动记事本",
+          "expected": "出现标题为\"无标题 - 记事本\"的窗口"
+        },
+        {
+          "id": 4,
+          "goal": "点击记事本的编辑区域",
+          "expected": "编辑区出现闪烁的光标"
+        },
+        {
+          "id": 5,
+          "goal": "输入文件路径 \"C:\\agent-test\\测试文档.txt\"",
+          "expected": "编辑区显示文件路径"
+        },
+        {
+          "id": 6,
+          "goal": "按回车键打开文件",
+          "expected": "文件内容显示在编辑区"
+        }
+      ],
+      "prompt": {
+        "name": "planner_v1",
+        "version": "v1",
+        "features": [
+          "role_setting",
+          "granularity_constraint",
+          "few_shot"
+        ],
+        "few_shot_count": 2
+      },
+      "truncated": 0,
+      "cost_cny": 0.0
+    },
+    "granularity_warnings": []
+  }
+}
