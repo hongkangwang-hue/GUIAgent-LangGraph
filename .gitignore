@@ -71,3 +71,8 @@ finetune/data/val-4x3-coords.jsonl
 # upscale 实验的中间图片：由 scripts/make_upscaled_val.py 可重建
 data/upscaled-0622/
 finetune/data/val-upscaled-coords.jsonl
+
+# 个人求职准备材料，与项目交付无关，只留本地
+GUI_Agent_大厂面试深挖指南_复核完善版.md
+必备知识手册.md
+面试答案.md
