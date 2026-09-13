@@ -52,8 +52,6 @@ import logging
 import time
 from typing import Any, TypedDict
 
-from langgraph.graph import END, START, StateGraph
-
 from control.actions import ActionValidationError
 from core.loop import (
     GROUNDING_SKIPPED,
@@ -153,6 +151,17 @@ class GraphAgentLoop(AgentLoop):
     # ------------------------------------------------------------------ #
 
     def _build_graph(self):
+        # **延迟导入。** `agent.session` 在模块顶部导入本模块以拿到工厂函数，
+        # 若这里在模块顶部导入 langgraph，没装 langgraph 的机器（比如依赖较旧的
+        # 客机）连 legacy 引擎都跑不起来——新代码把旧路径也拖下水。
+        try:
+            from langgraph.graph import END, START, StateGraph
+        except ImportError as exc:
+            raise RuntimeError(
+                "engine=langgraph 需要 langgraph：pip install langgraph。"
+                "不装的话可以继续用默认的 engine=legacy。"
+            ) from exc
+
         g = StateGraph(LoopState)
         g.add_node("check_budget", self._node_check_budget)
         g.add_node("capture", self._node_capture)

@@ -288,6 +288,83 @@ def test_graph_has_one_node_per_numbered_block_of_the_legacy_step() -> None:
 
 
 # ===================================================================== #
+# 没装 langgraph 的机器
+# ===================================================================== #
+
+
+def _hide_langgraph(monkeypatch) -> None:
+    """模拟没装 langgraph：让 `import langgraph.graph` 抛 ImportError。"""
+    import sys
+
+    for name in [m for m in sys.modules if m == "langgraph" or m.startswith("langgraph.")]:
+        monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setitem(sys.modules, "langgraph", None)
+    monkeypatch.setitem(sys.modules, "langgraph.graph", None)
+
+
+_WITHOUT_LANGGRAPH = """
+import sys
+sys.modules["langgraph"] = None
+sys.modules["langgraph.graph"] = None
+
+import agent.session  # 会话层在模块顶部导入了引擎工厂——这一行不许失败
+from control.executor import ActionExecutor
+from core.graph_loop import build_agent_loop
+from core.loop import LoopConfig
+from grounding.native import NativeGrounding
+from llm.fake import ScriptedBackend
+from perception.coordinate import CoordinateScaler
+from tests.test_loop import MODEL_H, MODEL_W, SCREEN, FakeCapturer
+import core.loop
+core.loop.time.sleep = lambda _s: None
+
+scaler = CoordinateScaler(SCREEN)
+scaler.register("planner", MODEL_W, MODEL_H)
+loop = build_agent_loop(
+    llm=ScriptedBackend([{"action": "left_click", "x": 1, "y": 1}, {"done": True}]),
+    grounding=NativeGrounding(MODEL_W, MODEL_H),
+    executor=ActionExecutor(scaler, space_name="planner", dry_run=True),
+    capturer=FakeCapturer(),
+    config=LoopConfig(max_iterations=3, save_frames=False),
+)
+print(loop.run_subtask("x").status)
+"""
+
+
+def test_legacy_engine_still_works_without_langgraph() -> None:
+    """**新代码不能把旧路径拖下水。**
+
+    会话层在模块顶部导入了本引擎的工厂。若 langgraph 也在模块顶部导入，
+    没装它的客机上连 legacy 引擎都跑不起来。
+
+    **必须在全新子进程里测。** 本文件顶部早已导入过 `core.graph_loop`，在当前
+    进程里再藏起 langgraph 不会重新触发模块导入——最初这条测试就是这么写的，
+    用变异测试把导入改回模块顶部后它照样通过，等于什么都没守住。
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    proc = subprocess.run(
+        [sys.executable, "-c", _WITHOUT_LANGGRAPH],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert proc.stdout.strip().splitlines()[-1] == STOP_DONE
+
+
+def test_langgraph_engine_explains_the_missing_dependency(tmp_path, monkeypatch) -> None:
+    _hide_langgraph(monkeypatch)
+    with pytest.raises(RuntimeError, match="pip install langgraph"):
+        _run("langgraph", [{"done": True}], tmp_path, BASE)
+
+
+# ===================================================================== #
 # 引擎选择
 # ===================================================================== #
 
