@@ -48,6 +48,7 @@ v1.0 的执行循环是 `core.loop.AgentLoop` 自写的，LangChain 只用在调
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from typing import Any, TypedDict
@@ -105,6 +106,24 @@ class LoopState(TypedDict, total=False):
     push_history: bool
 
 
+def _tracing_disabled():
+    """在图的执行期间强制关闭 LangSmith 追踪。
+
+    **本项目的硬约束：轨迹截图不出客机。** 而一旦机器上设了
+    ``LANGSMITH_TRACING=true``，LangGraph 会为每个节点建一条追踪记录，把节点的
+    输入输出——也就是状态里的截图、子任务原文、文件路径——送往 LangSmith 云端。
+    实测过：启动时设了这个变量，节点内的追踪就是开着的。宿主机与仓库当前都
+    没设，但这是一台机器改一个环境变量就会踩中的雷，不能指望每个人都记得。
+
+    没装 langsmith 时它本来就追踪不了，直接放行。
+    """
+    try:
+        from langsmith import tracing_context
+    except ImportError:
+        return contextlib.nullcontext()
+    return tracing_context(enabled=False)
+
+
 class GraphAgentLoop(AgentLoop):
     """`AgentLoop` 的 LangGraph 实现。对外接口与 `AgentLoop` 完全一致。"""
 
@@ -122,16 +141,17 @@ class GraphAgentLoop(AgentLoop):
         self._reflector_hint = ""
         logger.info("子任务 #%d 开始：%s", subtask_id, subtask)
 
-        final = self.graph.invoke(
-            {
-                "subtask": subtask,
-                "subtask_id": subtask_id,
-                "iteration": 1,
-                "result": result,
-                "terminal": None,
-            },
-            config={"recursion_limit": self.recursion_limit},
-        )
+        with _tracing_disabled():
+            final = self.graph.invoke(
+                {
+                    "subtask": subtask,
+                    "subtask_id": subtask_id,
+                    "iteration": 1,
+                    "result": result,
+                    "terminal": None,
+                },
+                config={"recursion_limit": self.recursion_limit},
+            )
         status, reason = final["terminal"]
         return self._stop(final["result"], status, reason)
 

@@ -288,6 +288,151 @@ def test_graph_has_one_node_per_numbered_block_of_the_legacy_step() -> None:
 
 
 # ===================================================================== #
+# 单元测试的假对象暴露不了、真机上才会出事的三件事
+# ===================================================================== #
+
+
+def _spy_loop(script, monkeypatch, node, probe):
+    """跑一个 langgraph 子任务，在指定节点里调用 probe() 并收集返回值。"""
+    seen: list = []
+    original = getattr(GraphAgentLoop, node)
+
+    def spy(self, state):
+        seen.append(probe())
+        return original(self, state)
+
+    monkeypatch.setattr(GraphAgentLoop, node, spy)
+    scaler = CoordinateScaler(SCREEN)
+    scaler.register("planner", MODEL_W, MODEL_H)
+    loop = build_agent_loop(
+        llm=ScriptedBackend(script),
+        grounding=NativeGrounding(MODEL_W, MODEL_H),
+        executor=ActionExecutor(scaler, space_name="planner", dry_run=True),
+        capturer=FakeCapturer(),
+        config=LoopConfig(max_iterations=5, save_frames=False, engine="langgraph"),
+    )
+    return loop, seen
+
+
+def test_nodes_run_on_the_calling_thread(monkeypatch) -> None:
+    """**节点必须在调用方线程里执行。**
+
+    换到工作线程会出三件事：dxcam 截图与 UIA（COM 组件）通常绑定创建它们的
+    线程；Ctrl+C 只打断主线程，工作线程里的键鼠操作会继续执行。
+
+    现在成立是因为图是线性的，每个超步只有一个任务，LangGraph 内联执行。
+    **这不是框架保证。** 后续阶段若加并行分支，LangGraph 会改用线程池——这条
+    测试就是为那一刻准备的。
+    """
+    import threading
+
+    main = threading.get_ident()
+    loop, seen = _spy_loop(
+        [CLICK, {"done": True}], monkeypatch, "_node_execute", threading.get_ident
+    )
+    loop.run_subtask("x")
+    assert seen and set(seen) == {main}
+
+
+@pytest.mark.parametrize("exc_type", [RuntimeError, KeyboardInterrupt])
+def test_executor_errors_propagate_and_are_never_retried(exc_type) -> None:
+    """**执行节点被重试，一次点击就会被执行两遍。**
+
+    LangGraph 支持给节点挂重试策略，默认不挂。这里钉住「默认不挂」这件事：
+    异常原样抛出，执行器只被调用一次；Ctrl+C 也要原样穿透，不能被框架吞掉。
+    """
+    scaler = CoordinateScaler(SCREEN)
+    scaler.register("planner", MODEL_W, MODEL_H)
+    loop = build_agent_loop(
+        llm=ScriptedBackend([CLICK, {"done": True}]),
+        grounding=NativeGrounding(MODEL_W, MODEL_H),
+        executor=ActionExecutor(scaler, space_name="planner", dry_run=True),
+        capturer=FakeCapturer(),
+        config=LoopConfig(max_iterations=5, save_frames=False, engine="langgraph"),
+    )
+    calls = []
+
+    def boom(action):
+        calls.append(action)
+        raise exc_type("执行器内部出错")
+
+    loop.executor.execute = boom
+    with pytest.raises(exc_type):
+        loop.run_subtask("x")
+    assert len(calls) == 1
+
+
+_TRACING_PROBE = """
+import sys
+from langsmith.utils import tracing_is_enabled
+import core.loop
+core.loop.time.sleep = lambda _s: None
+from control.executor import ActionExecutor
+from core.graph_loop import GraphAgentLoop, build_agent_loop
+from core.loop import LoopConfig
+from grounding.native import NativeGrounding
+from llm.fake import ScriptedBackend
+from perception.coordinate import CoordinateScaler
+from tests.test_loop import MODEL_H, MODEL_W, SCREEN, FakeCapturer
+
+seen = []
+original = GraphAgentLoop._node_capture
+def spy(self, state):
+    seen.append(tracing_is_enabled())
+    return original(self, state)
+GraphAgentLoop._node_capture = spy
+
+scaler = CoordinateScaler(SCREEN)
+scaler.register("planner", MODEL_W, MODEL_H)
+loop = build_agent_loop(
+    llm=ScriptedBackend([{"done": True}]),
+    grounding=NativeGrounding(MODEL_W, MODEL_H),
+    executor=ActionExecutor(scaler, space_name="planner", dry_run=True),
+    capturer=FakeCapturer(),
+    config=LoopConfig(max_iterations=2, save_frames=False, engine="langgraph"),
+)
+loop.run_subtask("x")
+print("outside", tracing_is_enabled())
+print("inside", seen[0])
+"""
+
+
+def test_langsmith_tracing_is_forced_off_inside_the_graph() -> None:
+    """**轨迹截图不出客机。** 设了 LANGSMITH_TRACING 的机器上，节点状态不许被追踪上传。
+
+    **必须在全新子进程里、启动时就设好变量。** langsmith 会缓存首次读到的
+    环境变量——在当前进程里临时设置读到的是缓存值。排查时第一个探针就被这个
+    缓存骗了，得出「设了也不激活」的错误结论。
+
+    端点指向一个不可达地址，保证这条测试本身绝不会真的上传任何东西。
+    """
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    env = {
+        **os.environ,
+        "LANGSMITH_TRACING": "true",
+        "LANGSMITH_API_KEY": "fake-key-for-test",
+        "LANGSMITH_ENDPOINT": "http://127.0.0.1:9",
+    }
+    proc = subprocess.run(
+        [sys.executable, "-c", _TRACING_PROBE],
+        cwd=Path(__file__).resolve().parent.parent,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    lines = dict(line.split() for line in proc.stdout.strip().splitlines()[-2:])
+    assert lines["outside"] == "True", "变量没生效，这条测试失去意义"
+    assert lines["inside"] == "False", "图的节点内追踪仍是开着的"
+
+
+# ===================================================================== #
 # 没装 langgraph 的机器
 # ===================================================================== #
 
