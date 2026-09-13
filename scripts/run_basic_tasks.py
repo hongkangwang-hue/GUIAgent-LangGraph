@@ -134,6 +134,9 @@ def build_parser() -> argparse.ArgumentParser:
     与 `eval/action.py`、`serve_local_model.py` 同一条护栏：
     `main()` 读了一个从没注册过的参数,要到跑起来才炸。
     """
+    # 引擎名单从 core.loop 读，不在这里抄一份——抄了就会在加引擎时漏改
+    from core.loop import ENGINES
+
     parser = argparse.ArgumentParser(description="M2 基础任务批量执行与成功率统计")
     parser.add_argument("--execute", action="store_true", help="真正操作键鼠（默认演练）")
     parser.add_argument("--repeats", type=int, default=5, help="每个任务跑几次")
@@ -169,6 +172,15 @@ def build_parser() -> argparse.ArgumentParser:
         "M4 任务 1 / 大纲 W6。**默认关闭**——打开会改变行为，"
         "而 M2/M3 的实测都是关着跑的。打开会自动启用帧差。"
         "实测依据见 docs/m4-错误分类体系.md：94.4%% 的子任务在 0~1 个动作后就报完成",
+    )
+    parser.add_argument(
+        "--engine",
+        choices=ENGINES,
+        default="legacy",
+        help="执行引擎。legacy 是自写循环 core/loop.py；langgraph 是同一套单步逻辑"
+        "改由 LangGraph 状态图编排（core/graph_loop.py）。**默认 legacy**——"
+        "M2~M4 的全部实测都跑在它上面。两者并存期间用同一快照、同一模型、同一模板"
+        "各跑一轮做端到端对照，结果在噪声范围内一致后删掉 legacy",
     )
     parser.add_argument(
         "--escalate-on-no-change",
@@ -348,6 +360,7 @@ def main() -> int:
                         max_iterations=max_steps,
                         escalate_on_no_change=args.escalate_on_no_change,
                         reflector=args.reflector,
+                        engine=args.engine,
                     ),
                     executor_template=args.executor_template,
                     planner_template=args.planner_template,
@@ -485,6 +498,9 @@ def archive_payload(
             "planner_template": args.planner_template,
             "escalate_on_no_change": args.escalate_on_no_change,
             "reflector": args.reflector,
+            # **执行引擎必须进存档。** legacy 与 langgraph 并存期间要做端到端对照，
+            # 两份存档除了这一项之外长得一模一样，不记下来就分不清哪份是哪个引擎跑的。
+            "engine": args.engine,
             "verify_delay": args.verify_delay,
             # 动作集也进存档——同 executor_template,它能左右结论。
             "allowed_actions": [x.strip() for x in args.allowed_actions.split(",") if x.strip()],

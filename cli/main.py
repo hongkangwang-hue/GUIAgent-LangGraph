@@ -35,7 +35,7 @@ except ImportError:  # pragma: no cover - 依赖缺失
 
 from agent.session import Session, SessionConfig
 from cli.panel import LivePanel, PanelState
-from core.loop import LoopConfig
+from core.loop import ENGINES, LoopConfig
 from core.trajectory import (
     DEFAULT_ROOT,
     ERROR_LABELS,
@@ -103,6 +103,11 @@ def run(
     executor_prompt: str = typer.Option("executor_v1", "--prompt", help="执行提示词模板版本"),
     planner_prompt: str = typer.Option("planner_v1", "--planner-prompt", help="拆解模板版本"),
     history_k: int = typer.Option(3, "--history-k", help="回传给模型的历史步数"),
+    engine: str = typer.Option(
+        "legacy",
+        "--engine",
+        help=f"执行引擎：{'/'.join(ENGINES)}。langgraph 为 LangGraph 状态图编排，默认 legacy",
+    ),
     no_panel: bool = typer.Option(False, "--no-panel", help="关掉实时面板，只打日志"),
     output: Path = typer.Option(None, "--output", help="把结果摘要写成 JSON"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
@@ -133,6 +138,7 @@ def run(
             max_iterations=max_iterations,
             cost_limit_cny=cost_limit,
             history_k=history_k,
+            engine=engine,
         ),
     )
     session_config.context = type(session_config.context)(k=history_k)

@@ -47,6 +47,24 @@ class TestArchiveRecordsProvenance:
     def test_记下用了哪份提示词模板(self):
         assert self._payload()["executor_template"] == "executor_v0"
 
+    def test_记下执行引擎(self):
+        """legacy 与 langgraph 做端到端对照时，两份存档只靠这一项区分。"""
+        from scripts.run_basic_tasks import archive_payload
+
+        assert self._payload()["engine"] == "legacy"
+        args = make_args(engine="langgraph")
+        payload = json.loads(archive_payload([], args, "离线 / 本地", offline=True, partial=False))
+        assert payload["engine"] == "langgraph"
+
+    def test_引擎参数的可选值来自_core_loop(self):
+        """名单不能在脚本里抄一份，否则加引擎时会漏改。"""
+        from core.loop import ENGINES
+        from scripts.run_basic_tasks import build_parser
+
+        action = next(a for a in build_parser()._actions if a.dest == "engine")
+        assert tuple(action.choices) == ENGINES
+        assert action.default == "legacy"
+
     def test_记下屏幕设置(self):
         screen = self._payload()["screen"]
         assert "resolution" in screen or screen == {}, "取不到就该是空，不能猜一个"

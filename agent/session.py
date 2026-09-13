@@ -36,7 +36,8 @@ from pathlib import Path
 from agent.context import ContextPolicy, ContextWindow, Conversation
 from agent.planner import Plan, PlanError, Planner
 from agent.prompts import PromptTemplate, load_template
-from core.loop import STOP_DONE, AgentLoop, LoopConfig, LoopResult
+from core.graph_loop import build_agent_loop
+from core.loop import STOP_DONE, LoopConfig, LoopResult
 from core.trajectory import DEFAULT_ROOT, TrajectoryWriter
 from llm.base import CostInfo, LLMBackend
 
@@ -398,7 +399,8 @@ class Session:
         # 拆解阶段动过后端的提示词配置，执行前必须重新注入执行模板
         self._prepare_backend()
 
-        loop = AgentLoop(
+        # 经工厂创建：按 config.loop.engine 挑 legacy 或 langgraph，见 core/graph_loop.py
+        loop = build_agent_loop(
             llm=self.backend,
             grounding=self.grounding,
             executor=self.executor,

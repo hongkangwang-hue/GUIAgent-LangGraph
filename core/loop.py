@@ -50,6 +50,9 @@ from perception.capture import ScreenCapturer, Screenshot
 
 logger = logging.getLogger(__name__)
 
+#: 可选的执行引擎，见 `LoopConfig.engine`。
+ENGINES = ("legacy", "langgraph")
+
 
 # ---------------------------------------------------------------------- #
 # 配置与结果
@@ -113,11 +116,20 @@ class LoopConfig:
     #: 同一子任务里 Reflector 最多连续否决几次。到上限接受，交程序化判定兜底。
     reflector_max_rejects: int = 2
 
+    #: 执行引擎。``legacy`` 是本文件的 `AgentLoop`；``langgraph`` 是
+    #: `core.graph_loop.GraphAgentLoop`，同一套单步逻辑改由 LangGraph 状态图编排。
+    #:
+    #: **默认 legacy，理由同上两个开关**：M2~M4 的全部实测都跑在 legacy 上。
+    #: 两个引擎并存到 langgraph 在客机上通过端到端对照为止，届时删掉 legacy。
+    engine: str = "legacy"
+
     def __post_init__(self) -> None:
         if self.max_iterations < 1:
             raise ValueError("max_iterations 至少为 1")
         if self.history_k < 0:
             raise ValueError("history_k 不能为负")
+        if self.engine not in ENGINES:
+            raise ValueError(f"engine 必须是 {'/'.join(ENGINES)} 之一，收到 {self.engine!r}")
 
 
 #: 循环的结束原因。

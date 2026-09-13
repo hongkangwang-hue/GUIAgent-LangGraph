@@ -7,14 +7,23 @@
 因此这里用 `ScriptedBackend` 把模型输出钉死，用 ``dry_run`` 的执行器和
 假 capturer 隔掉真实键鼠与屏幕。整个文件不需要 API key、不需要桌面，
 在 CI 上跑得完。
+
+## 整个文件在两个执行引擎上各跑一遍
+
+``legacy``（`core.loop.AgentLoop`）与 ``langgraph``（`core.graph_loop.GraphAgentLoop`）
+并存期间，这里的每一条用例都必须对两者同时成立——这是防止两份单步逻辑跑偏的
+主要手段。`build_loop` 会把当前引擎写进 `LoopConfig`，调用方不必关心。
 """
 
 from __future__ import annotations
+
+import dataclasses
 
 import numpy as np
 import pytest
 
 from control.executor import ActionExecutor
+from core.graph_loop import GraphAgentLoop, build_agent_loop
 from core.loop import (
     GROUNDING_SKIPPED,
     STOP_ACTION_FAILED,
@@ -64,21 +73,45 @@ def _no_settle(monkeypatch):
     monkeypatch.setattr("core.loop.time.sleep", lambda _seconds: None)
 
 
+#: 当前用例跑在哪个引擎上。由下面的参数化 fixture 写入，`build_loop` 读取
+_ENGINE = {"name": "legacy"}
+
+
+@pytest.fixture(autouse=True, params=["legacy", "langgraph"])
+def engine(request):
+    _ENGINE["name"] = request.param
+    yield request.param
+    _ENGINE["name"] = "legacy"
+
+
 def build_loop(script, tmp_path=None, config=None, price=None, on_exhausted="done"):
     scaler = CoordinateScaler(SCREEN)
     scaler.register("planner", MODEL_W, MODEL_H)
     executor = ActionExecutor(scaler, space_name="planner", dry_run=True)
     backend = ScriptedBackend(script, price=price, on_exhausted=on_exhausted)
     writer = TrajectoryWriter("测试任务", root=tmp_path) if tmp_path else None
-    loop = AgentLoop(
+    config = config or LoopConfig(max_iterations=5, save_frames=False)
+    loop = build_agent_loop(
         llm=backend,
         grounding=NativeGrounding(MODEL_W, MODEL_H),
         executor=executor,
         capturer=FakeCapturer(),
         writer=writer,
-        config=config or LoopConfig(max_iterations=5, save_frames=False),
+        config=dataclasses.replace(config, engine=_ENGINE["name"]),
     )
     return loop, backend, writer
+
+
+def test_build_loop_really_uses_the_parametrized_engine(engine) -> None:
+    """**守卫：参数化失效时，两轮会悄悄都跑 legacy，整个文件形同只测了一边。**
+
+    写 `build_loop` 时就差点这样——它原本直接实例化 `AgentLoop`，传了
+    ``engine="langgraph"`` 也照样拿到旧类，而所有用例依然全绿。
+    """
+    loop, _, _ = build_loop([{"done": True}])
+    expected = GraphAgentLoop if engine == "langgraph" else AgentLoop
+    assert type(loop) is expected
+    assert loop.config.engine == engine
 
 
 # ===================================================================== #
