@@ -1,0 +1,39 @@
+[project]
+name = "gui-agent-w5"
+version = "1.0.0"
+description = "多模态大模型 LoRA 微调与效果对比（第 5 周交付）"
+requires-python = ">=3.10"
+
+# **必须与源仓库一致（行宽 100）。** 不写这一段的话，ruff 找到的最近配置
+# 就是本文件，退回默认的 88 字符，于是把这里的代码重排成和源仓库不同的
+# 样子——交付副本与源码逐字对不上，评审时无从判断哪份是真的。
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 比 W4 多一个 "."：tests/test_prompt_ablation.py 与 test_resolution_ablation.py
+# 会 `import scripts.ablate_prompts` / `scripts.ablate_resolution`，
+# 需要交付包根目录在 sys.path 上（见 README §三 偏差 4）。
+pythonpath = ["src", "."]
+markers = [
+    "windows: 需要真实 Windows 桌面，CI 上跳过",
+    "gpu: 需要可用 GPU",
+    "slow: 耗时较长（模型推理等）",
+]
+
+[tool.coverage.run]
+# 只统计**本周交付的两个包**。src/ 下另有 agent、control、core、data、
+# grounding、llm、perception 七个包，分属第 2、3、4 周，是为了让本包能
+# 独立 import 才一并提供的，计进来会把本周的覆盖率稀释成一个没有意义的数。
+#
+# **必须写路径 src/finetune，不能写包名 finetune。** 包根目录下另有一个存放
+# 训练数据的 finetune/data/ 目录，coverage 看到同名目录会把它当成路径，
+# 于是 finetune 包整个从报告里消失、且不报任何警告。实测踩到过。
+source = ["src/finetune", "src/eval"]
+omit = ["*/__init__.py"]
