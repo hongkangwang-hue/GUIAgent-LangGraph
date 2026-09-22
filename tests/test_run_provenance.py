@@ -178,3 +178,37 @@ class TestPlannerTemplateProvenance:
 
         assert build_parser().parse_args([]).planner_template == ""
         assert "args.planner_template or SessionConfig.planner_template" in inspect.getsource(mod)
+
+
+class TestSettleStrategyProvenance:
+    """等待策略决定动作后多久拍下一帧，而那张图是模型下一步的全部输入。
+
+    不记进存档的话，两份成绩不同的存档摆在一起看不出任何区别——
+    这正是本文件开头那两次事故的形态。
+    """
+
+    def test_等待策略进存档(self):
+        import json
+
+        from scripts.run_basic_tasks import archive_payload
+
+        payload = json.loads(archive_payload([], make_args(), "离线", offline=True, partial=False))
+        assert payload["adaptive_settle"] is False
+
+        args = make_args(adaptive_settle=True)
+        payload = json.loads(archive_payload([], args, "离线", offline=True, partial=False))
+        assert payload["adaptive_settle"] is True
+
+    def test_默认是固定等待(self):
+        """**默认必须是 v1.0 的行为**，否则新旧端到端数字不可比。"""
+        from scripts.run_basic_tasks import build_parser
+
+        assert build_parser().parse_args([]).adaptive_settle is False
+
+    def test_报告里写的命令跑得通(self):
+        """报告引用了 `--adaptive-settle`。参数不存在的话，读报告的人
+        照着敲会直接报错——交付物里引用跑不通的命令是硬伤。
+        """
+        from scripts.run_basic_tasks import build_parser
+
+        assert build_parser().parse_args(["--adaptive-settle"]).adaptive_settle is True

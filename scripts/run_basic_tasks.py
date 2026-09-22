@@ -285,6 +285,14 @@ def build_parser() -> argparse.ArgumentParser:
         "两次拿到无法验证环境一致性的对比数据（17%% 那轮、12%%→40%% 那对）",
     )
     parser.add_argument(
+        "--adaptive-settle",
+        action="store_true",
+        help="动作后不再固定睡 settle_seconds，而是连拍到界面不再变化为止。"
+        "大纲 W6 任务 3（提升感知速度）。**默认关闭**——它改变模型看到的那张图，"
+        "而 M2~M5 的端到端数字全是在固定等待下跑的。收益用 A/B 对照给出："
+        "同快照各跑一轮，比较每轮耗时与成功率",
+    )
+    parser.add_argument(
         "--reflector",
         action="store_true",
         help="模型报 done 时先做级联判定，上一步没让屏幕变就否决并要求重试。"
@@ -527,6 +535,7 @@ def main() -> int:
                         max_iterations=max_steps,
                         escalate_on_no_change=args.escalate_on_no_change,
                         reflector=args.reflector,
+                        adaptive_settle=args.adaptive_settle,
                         engine=args.engine,
                     ),
                     executor_template=args.executor_template,
@@ -708,6 +717,9 @@ def archive_payload(
             # **执行引擎必须进存档。** legacy 与 langgraph 并存期间要做端到端对照，
             # 两份存档除了这一项之外长得一模一样，不记下来就分不清哪份是哪个引擎跑的。
             "engine": args.engine,
+            # 等待策略也进存档：它决定动作后多久拍下一帧，而那张图是模型
+            # 下一步的全部输入。两份存档除了这一项之外一模一样，不记就分不清。
+            "adaptive_settle": args.adaptive_settle,
             "verify_delay": args.verify_delay,
             # 动作集也进存档——同 executor_template,它能左右结论。
             "allowed_actions": [x.strip() for x in args.allowed_actions.split(",") if x.strip()],
