@@ -1,0 +1,262 @@
+# 蒸馏采集任务集 —— **只用来采训练数据，不用来评测**
+#
+# ## 它和评测任务集的关系
+#
+#   tasks/basic_tasks.yaml    5 个基础任务，M2/M3/M4 的评测集
+#   tasks/desktop_20.yaml     20 个任务，M5 的评测集
+#   tasks/collect_variants.yaml  本文件，采集集
+#
+# **三者的参数不得重叠。** 采集集里出现过的目标文件、搜索词、消息内容，
+# 训练后的模型就见过了；再拿评测集去测，测的是记忆不是能力。
+# `tests/test_collect_variants.py` 逐条比对三个文件，重叠即测试失败。
+#
+# ## 为什么只换参数、不换任务结构
+#
+# 试点阶段的成本考量：新写任务结构要连带写重置脚本与成功判据，2~3 天。
+# 换参数半天就能做完。
+#
+# **代价必须写清楚**：任务结构没变，模型可能只是把流程背下来，
+# 而不是学会了拆解任务。所以这批数据**只能证明「客机域截图有没有用」，
+# 证不了「拆解能力能不能学」**。后者要等完整方案里新写的任务集。
+#
+# ## 采集用的是 8B（教师模型）
+#
+#   python scripts/run_basic_tasks.py --tasks tasks/collect_variants.yaml \
+#       --execute --repeats 5 --executor-template executor_v0 \
+#       --guest-snapshot <干净快照> --tag collect-8b
+#
+# 跑之前先 `python tasks/setup_collect.py` 建采集专用文件。
+
+tasks:
+  # --- 搜索类：只换搜索词 ------------------------------------------- #
+  - name: collect_search_weather
+    title: 采集-搜索天气预报
+    difficulty: 多步
+    instruction: 打开 Microsoft Edge，在地址栏搜索「天气预报」
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: msedge.exe
+          should_run: true
+        - type: window_title
+          pattern: "天气预报.*Edge"
+          regex: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    precondition:
+      - type: process
+        name: msedge.exe
+        should_run: false
+
+  - name: collect_search_time
+    title: 采集-搜索北京时间
+    difficulty: 多步
+    instruction: 打开 Microsoft Edge，在地址栏搜索「北京时间」
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: msedge.exe
+          should_run: true
+        - type: window_title
+          pattern: "北京时间.*Edge"
+          regex: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    precondition:
+      - type: process
+        name: msedge.exe
+        should_run: false
+
+  - name: collect_search_license
+    title: 采集-搜索开源许可证
+    difficulty: 多步
+    instruction: 打开 Microsoft Edge，在地址栏搜索「开源许可证」
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: msedge.exe
+          should_run: true
+        - type: window_title
+          pattern: "开源许可证.*Edge"
+          regex: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    precondition:
+      - type: process
+        name: msedge.exe
+        should_run: false
+
+  # --- 打开文件类：只换文件，且是采集专用文件 ------------------------ #
+  # 用 setup_collect.py 建的文件，不碰评测集的 测试文档.txt / 源文件.txt。
+  - name: collect_open_file_a
+    title: 采集-打开采集文档A
+    difficulty: 多步
+    instruction: 用记事本打开 C:\agent-test\采集文档A.txt
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: notepad.exe
+          should_run: true
+        - type: window_title
+          pattern: "采集文档A"
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    # 第二条同 open_file：记事本会话恢复会让起点就满足判据。
+    precondition:
+      - type: file_exists
+        path: C:/agent-test/采集文档A.txt
+      - type: process
+        name: notepad.exe
+        should_run: false
+
+  - name: collect_open_file_b
+    title: 采集-打开采集文档B
+    difficulty: 多步
+    instruction: 用记事本打开 C:\agent-test\采集文档B.txt
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: notepad.exe
+          should_run: true
+        - type: window_title
+          pattern: "采集文档B"
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    precondition:
+      - type: file_exists
+        path: C:/agent-test/采集文档B.txt
+      - type: process
+        name: notepad.exe
+        should_run: false
+
+  - name: collect_open_file_c
+    title: 采集-打开采集文档C
+    difficulty: 多步
+    instruction: 用记事本打开 C:\agent-test\采集文档C.txt
+    max_steps: 12
+    success_check:
+      mode: all
+      checks:
+        - type: process
+          name: notepad.exe
+          should_run: true
+        - type: window_title
+          pattern: "采集文档C"
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+    precondition:
+      - type: file_exists
+        path: C:/agent-test/采集文档C.txt
+      - type: process
+        name: notepad.exe
+        should_run: false
+
+  # --- 发消息类：只换消息内容 ---------------------------------------- #
+  - name: collect_send_weather
+    title: 采集-发送今天天气不错
+    difficulty: 多步
+    instruction: 在「测试消息」程序里发送一条内容为「今天天气不错」的消息
+    max_steps: 12
+    success_check:
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 今天天气不错
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/mock_messenger_reset.py
+    precondition:
+      - type: window_title
+        pattern: 测试消息
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 今天天气不错
+        should_contain: false
+
+  - name: collect_send_note
+    title: 采集-发送采集测试消息
+    difficulty: 多步
+    instruction: 在「测试消息」程序里发送一条内容为「采集测试消息」的消息
+    max_steps: 12
+    success_check:
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 采集测试消息
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/mock_messenger_reset.py
+    precondition:
+      - type: window_title
+        pattern: 测试消息
+      - type: file_contains
+        path: C:/agent-test/messages.log
+        text: 采集测试消息
+        should_contain: false
+
+  # --- 开/关应用类：换成画图 ----------------------------------------- #
+  # 计算器与记事本在两个评测集里都出现过（close_app / open_notepad /
+  # close_notepad / open_calculator），所以采集换成画图。
+  - name: collect_open_paint
+    title: 采集-打开画图
+    difficulty: 单步
+    instruction: 打开画图程序
+    max_steps: 6
+    success_check:
+      - type: process
+        name: mspaint.exe
+        should_run: true
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - taskkill /F /IM mspaint.exe /T
+    precondition:
+      - type: process
+        name: mspaint.exe
+        should_run: false
+
+  - name: collect_close_paint
+    title: 采集-关闭画图
+    difficulty: 单步
+    instruction: 关闭画图窗口
+    max_steps: 6
+    success_check:
+      - type: process
+        name: mspaint.exe
+        should_run: false
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - taskkill /F /IM mspaint.exe /T
+      - start mspaint
+      - python tasks/wait_for_process.py mspaint.exe
+    precondition:
+      - type: process
+        name: mspaint.exe
+        should_run: true
