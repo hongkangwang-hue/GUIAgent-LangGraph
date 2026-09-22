@@ -246,8 +246,33 @@ def _optional_float(name: str) -> float | None:
         return None
 
 
-def load_dotenv_if_present(path: str = ".env") -> bool:
+#: 显式指定 .env 位置的环境变量。
+ENV_FILE_VAR = "GUI_AGENT_ENV_FILE"
+
+#: **默认位置在仓库外。** M2 实测 Agent 在桌面上打开并修改保存了仓库里的 `.env`
+#: （`docs/m2-basic-tasks-report.md` §7.5）：它就在工作目录里，记事本会话恢复一次就会被拉到前台。
+#: 放到用户目录下，Agent 的任务路径里不会经过它。
+USER_ENV_FILE = Path.home() / ".gui-agent" / ".env"
+
+_warned_local_env = False
+
+
+def resolve_env_file() -> Path | None:
+    """按优先级找 .env：`GUI_AGENT_ENV_FILE` → `~/.gui-agent/.env` → 当前目录 `.env`。都没有返回 None。"""
+    explicit = os.environ.get(ENV_FILE_VAR, "").strip()
+    if explicit:
+        return Path(explicit)
+    if USER_ENV_FILE.exists():
+        return USER_ENV_FILE
+    local = Path(".env")
+    return local if local.exists() else None
+
+
+def load_dotenv_if_present(path: str | None = None) -> bool:
     """把 .env 读进环境变量。
+
+    ``path`` 不给时按 `resolve_env_file()` 的优先级找。**落到当前目录的 .env 时打一次警告**：
+    能用，但它在 Agent 碰得到的地方。
 
     自己解析而不是拉 python-dotenv：需求只有"KEY=VALUE 一行一条"，
     为此多一个依赖不划算。**已存在的环境变量不覆盖**——命令行里显式
@@ -263,6 +288,19 @@ def load_dotenv_if_present(path: str = ".env") -> bool:
     所以按 UTF-8 → GBK → 忽略错误 三级降级读，并在降级时明确告知。
     读得进来比读得纯粹重要：一个坏掉的 .env 不该让整个程序起不来。
     """
+    global _warned_local_env
+    if path is None:
+        resolved = resolve_env_file()
+        if resolved is None:
+            return False
+        if resolved == Path(".env") and not _warned_local_env:
+            _warned_local_env = True
+            print(
+                f"[安全] 正在读取工作目录下的 .env。M2 实测 Agent 在桌面上打开并修改保存过它。\n"
+                f"       建议移到 {USER_ENV_FILE}，或用环境变量 {ENV_FILE_VAR} 指定仓库外的位置。\n"
+                f"       离线评测（--provider selfhost / local）不需要任何密钥，客机上可以完全不放 .env。"
+            )
+        path = str(resolved)
     if not os.path.exists(path):
         return False
 

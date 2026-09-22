@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from control.actions import Action, ActionType
 from control.emergency_stop import EmergencyStop, EmergencyStopped
 from control.safety import ActionBlocked, SafetyGuard, SafetyVerdict
+from control.sentinel import SafetySentinel
 from perception.capture import ScreenCapturer, Screenshot
 from perception.coordinate import CoordinateScaler
 from perception.types import Point
@@ -101,11 +102,19 @@ class ActionExecutor:
         capturer: ScreenCapturer | None = None,
         move_duration: float = DEFAULT_MOVE_DURATION,
         dry_run: bool = False,
+        sentinel: SafetySentinel | None = None,
     ) -> None:
         self.scaler = scaler
         self.space_name = space_name
         self.guard = guard if guard is not None else SafetyGuard()
         self.emergency_stop = emergency_stop if emergency_stop is not None else EmergencyStop()
+        #: 上下文哨兵：看动作发往哪个窗口，命中即自动急停（见 `control/sentinel.py`）。
+        #:
+        #: **只在真执行时默认开。** 演练不发键鼠事件，没有要防的东西；而开发者本机
+        #: 前台恰好开着 `.env` 或登录页时，默认开会让演练与单元测试莫名其妙地停下。
+        self.sentinel = (
+            sentinel if sentinel is not None else (None if dry_run else SafetySentinel())
+        )
         self.capturer = capturer
         self.move_duration = move_duration
         #: 只走完整个校验与转换流程但不真的发键鼠事件。写测试与演练时用
@@ -167,6 +176,27 @@ class ActionExecutor:
                 ActionResult(action, False, error=str(exc), error_type="emergency_stopped"), start
             )
 
+        # --- 上下文哨兵：命中即急停，而不只是拒绝这一个动作 ---
+        # 敏感窗口出现在前台，说明环境已经偏离预期；换个动作继续跑并不安全。
+        # 触发急停后本轮与整批都会停下，等人确认（见 scripts/run_basic_tasks.py）。
+        if self.sentinel is not None:
+            event = self.sentinel.check(action)
+            if event is not None:
+                self.emergency_stop.trigger(reason=f"sentinel:{event.rule}")
+                verdict = SafetyVerdict.block(
+                    f"sentinel:{event.rule}", event.reason, event.evidence
+                )
+                return self._finish(
+                    ActionResult(
+                        action,
+                        False,
+                        error=f"[自动急停:{event.rule}] {event.reason}",
+                        error_type="emergency_stopped",
+                        verdict=verdict,
+                    ),
+                    start,
+                )
+
         # --- 安全检查 ---
         # 两条路径都要拦：guard 可能配成抛异常，也可能配成只返回结论。
         # **绝不能只处理异常那条**——否则把 raise_on_block 设成 False
@@ -197,18 +227,26 @@ class ActionExecutor:
                 )
             logger.debug(
                 "%s 坐标转换：模型(%d,%d) → 屏幕%s",
-                action.type.value, action.x, action.y, real_point.as_tuple(),
+                action.type.value,
+                action.x,
+                action.y,
+                real_point.as_tuple(),
             )
 
         result = ActionResult(
-            action=action, success=False, real_point=real_point,
-            real_point_to=real_point_to, verdict=verdict,
+            action=action,
+            success=False,
+            real_point=real_point,
+            real_point_to=real_point_to,
+            verdict=verdict,
         )
 
         # --- 分派 ---
         try:
             if self.dry_run:
-                logger.info("[dry-run] %s → %s", action, real_point.as_tuple() if real_point else "—")
+                logger.info(
+                    "[dry-run] %s → %s", action, real_point.as_tuple() if real_point else "—"
+                )
             else:
                 self._dispatch(action, real_point, real_point_to, result)
             result.success = True
@@ -217,12 +255,21 @@ class ActionExecutor:
         except NotImplementedError as exc:
             result.error, result.error_type = str(exc), "not_implemented"
         except Exception as exc:  # noqa: BLE001 —— 键鼠底层可能抛任何东西
-            result.error, result.error_type = str(exc), type(exc).__name__
-            logger.warning("动作执行失败 %s：%s", action, exc)
+            if type(exc).__name__ == "FailSafeException":
+                # **FAILSAFE 是人把鼠标甩到了角落，是一次急停，不是一次动作失败。**
+                # 原来落进下面的通用分支：本轮以 action_failed 结束，下一轮照常开跑，
+                # 人的刹车意图被当成了模型的失误，也不会计入人工干预。
+                self.emergency_stop.trigger(reason="failsafe")
+                result.error, result.error_type = str(exc), "emergency_stopped"
+            else:
+                result.error, result.error_type = str(exc), type(exc).__name__
+                logger.warning("动作执行失败 %s：%s", action, exc)
 
         return self._finish(result, start)
 
-    def execute_all(self, actions: list[Action], stop_on_failure: bool = True) -> list[ActionResult]:
+    def execute_all(
+        self, actions: list[Action], stop_on_failure: bool = True
+    ) -> list[ActionResult]:
         """顺序执行多个动作。默认一步失败即停——GUI 操作有强顺序依赖，
         前一步没成功就往下走，后面全是无意义的点击。"""
         results = []
@@ -273,7 +320,8 @@ class ActionExecutor:
             pyautogui.mouseDown(button="left")
             try:
                 pyautogui.moveTo(
-                    point_to.x, point_to.y,
+                    point_to.x,
+                    point_to.y,
                     duration=max(self.move_duration, 0.4),
                     tween=pyautogui.easeInOutQuad,
                 )
@@ -313,7 +361,9 @@ class ActionExecutor:
         if point is None:
             return
         pyautogui = self._ensure_pyautogui()
-        pyautogui.moveTo(point.x, point.y, duration=self.move_duration, tween=pyautogui.easeInOutQuad)
+        pyautogui.moveTo(
+            point.x, point.y, duration=self.move_duration, tween=pyautogui.easeInOutQuad
+        )
 
     def _type_text(self, text: str, result: ActionResult) -> None:
         """经剪贴板输入文本，失败时退回逐字符输入（只对 ASCII 有效）。"""
