@@ -116,6 +116,18 @@ class LoopConfig:
     #: 同一子任务里 Reflector 最多连续否决几次。到上限接受，交程序化判定兜底。
     reflector_max_rejects: int = 2
 
+    #: 动作后等界面稳定的方式。False 走 v1.0 的固定 `settle_seconds`，
+    #: True 走 `perception.stability` 的自适应等待（连拍到不再变化）。
+    #:
+    #: **默认 False，和另外两个开关同一个理由**：它改变模型看到的那张图，
+    #: 而 M2~M5 的端到端数字全是在固定等待下跑的。默认改掉，新旧数据就不可比。
+    #: 收益用 A/B 对照给出（大纲第 6 周任务 3）。
+    adaptive_settle: bool = False
+
+    #: 自适应等待的上限。界面有动画时会等满这么久——**这不是保险，是必须**，
+    #: 视频与 loading 动画在持续改变像素，永远等不到「不再变化」。
+    settle_max_wait: float = 2.0
+
     #: 执行引擎。``legacy`` 是本文件的 `AgentLoop`；``langgraph`` 是
     #: `core.graph_loop.GraphAgentLoop`，同一套单步逻辑改由 LangGraph 状态图编排。
     #:
@@ -450,9 +462,8 @@ class AgentLoop:
         # --- 7. 等界面稳定，再拍一张 ---
         after = None
         if outcome.success:
-            time.sleep(self.config.settle_seconds)
             start = time.perf_counter()
-            after = self.capturer.capture(fresh=True)
+            after = self._settle_and_capture(record)
             latency.screenshot_ms += (time.perf_counter() - start) * 1000.0
             record.screenshot_after = self._save_frame(after, step_index, "after")
 
@@ -537,6 +548,30 @@ class AgentLoop:
             return intent, attempt
 
         raise last or LLMBackendError("模型调用失败", kind="unknown")
+
+    def _settle_and_capture(self, record: StepRecord) -> Screenshot:
+        """等界面稳定，拍下动作后的那一帧。
+
+        两种策略共用这一个入口，**两个引擎也共用它**——`core.graph_loop`
+        的 observe 节点直接调这个方法，而不是自己再写一份。上一次合并就是
+        因为单步逻辑有两份拷贝而跑偏，等价性测试才红的。
+
+        自适应那条路把实测记进 `record.meta["settle"]`：省了多少时间要能
+        从数据里算回来，不写估算值。
+        """
+        if not self.config.adaptive_settle:
+            time.sleep(self.config.settle_seconds)
+            return self.capturer.capture(fresh=True)
+
+        from perception.stability import wait_until_stable
+
+        shot, report = wait_until_stable(
+            lambda: self.capturer.capture(fresh=True),
+            max_wait=self.config.settle_max_wait,
+            threshold=self.config.change_threshold,
+        )
+        record.meta["settle"] = report.as_dict()
+        return shot
 
     def _locate(self, intent: ActionIntent, screenshot: Screenshot) -> GroundingResult:
         """定位。

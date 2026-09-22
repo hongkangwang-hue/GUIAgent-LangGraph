@@ -416,9 +416,10 @@ class GraphAgentLoop(AgentLoop):
 
         after = None
         if outcome.success:
-            time.sleep(self.config.settle_seconds)
             start = time.perf_counter()
-            after = self.capturer.capture(fresh=True)
+            # **复用 AgentLoop 的方法，不再抄一份。** 固定等待与自适应等待的
+            # 选择是单步逻辑，两个引擎之间只允许在编排上不同。
+            after = self._settle_and_capture(record)
             latency.screenshot_ms += (time.perf_counter() - start) * 1000.0
             record.screenshot_after = self._save_frame(after, step_index, "after")
 

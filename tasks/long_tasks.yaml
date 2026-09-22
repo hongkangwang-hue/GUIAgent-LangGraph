@@ -1,0 +1,150 @@
+# 较长任务测试集 —— M4 交付物 4，对应验收标准 4
+#
+# 要求：**3 个 8 步以上、同一应用内**的任务。
+#
+# ## 为什么必须是「同一应用内」
+#
+# 基础任务集里最长的 `send_message` 也只要 4~5 步，而且跨应用：
+# 任务栏 → 聊天程序。跨应用的失败大多发生在「切过去」那一步，
+# 一旦切错，后面所有步骤都在错误的窗口上执行——这测的是启动，不是长程。
+#
+# 同一应用内的长任务把启动这个变量去掉：窗口从头到尾不变，失败只可能
+# 来自「在正确的界面上做错了事」。**M4 要测的恢复能力正是这一种。**
+#
+# ## 为什么是记事本
+#
+# 记事本的每一步都有**可程序化验证的副作用**（文件内容），不像浏览器
+# 那样只能查窗口标题。而 M2 的教训是：判据越间接，假成功越多。
+#
+# 三个任务都以「文件内容等于某个确定的字符串」收尾，一个字都不能差。
+#
+# ## 步数怎么数
+#
+# 这里写的是**人工完成它需要的动作数**，不是模型实际会用的步数。
+# 模型用得多是能力问题，用得少八成是漏做了步骤——这正是要测的。
+#
+# 用法（评测，不是采集）：
+#
+#   python scripts/run_basic_tasks.py --tasks tasks/long_tasks.yaml \
+#       --execute --repeats 5 --guest-snapshot <快照名> --tag long-v2
+
+tasks:
+  # ------------------------------------------------------------------ #
+  - name: long_write_three_lines
+    title: 逐行写入三行并保存
+    difficulty: 长任务
+    # 人工步数：点记事本 → 打第一行 → 回车 → 第二行 → 回车 → 第三行
+    #          → Ctrl+S → 文件名 → 回车  = 9 步
+    instruction: 在记事本里依次输入三行内容「第一行」「第二行」「第三行」，每行一段，然后保存到 C:\agent-test\三行.txt
+    max_steps: 20
+    success_check:
+      mode: all
+      checks:
+        - type: file_exists
+          path: C:/agent-test/三行.txt
+        - type: file_contains
+          path: C:/agent-test/三行.txt
+          text: 第一行
+        - type: file_contains
+          path: C:/agent-test/三行.txt
+          text: 第二行
+        - type: file_contains
+          path: C:/agent-test/三行.txt
+          text: 第三行
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/setup_long_tasks.py
+      - start notepad
+      - python tasks/wait_for_process.py notepad.exe
+    # 记事本必须已经开着：这个任务测的是「在应用内做长流程」，
+    # 不是「能不能把应用打开」。前者失败才是 M4 要研究的。
+    precondition:
+      - type: process
+        name: notepad.exe
+        should_run: true
+      - type: file_exists
+        path: C:/agent-test/三行.txt
+        should_exist: false
+    note: >
+      三条判据缺一不可。只查文件存在的话，存了个空文件也算成功——
+      而「打开了保存对话框但没输入内容」正是实测中出现过的形态。
+
+  # ------------------------------------------------------------------ #
+  - name: long_append_and_save
+    title: 在已有内容末尾追加两行再保存
+    difficulty: 长任务
+    # 人工步数：Ctrl+End → 回车 → 打第一行 → 回车 → 打第二行 → Ctrl+S
+    #          （文件已存在，直接覆盖）= 8 步，含定位到末尾
+    instruction: 记事本里已经打开了 C:\agent-test\长任务底稿.txt，把光标移到文件末尾，追加两行「补充一」和「补充二」，然后保存
+    max_steps: 20
+    success_check:
+      mode: all
+      checks:
+        - type: file_contains
+          path: C:/agent-test/长任务底稿.txt
+          text: 补充一
+        - type: file_contains
+          path: C:/agent-test/长任务底稿.txt
+          text: 补充二
+        # 原有内容不能被覆盖掉。**「清空重写」也能让上面两条通过**，
+        # 而那不是「追加」。这一条把它挡住。
+        - type: file_contains
+          path: C:/agent-test/长任务底稿.txt
+          text: 底稿原有内容
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/setup_long_tasks.py
+      - start notepad C:\agent-test\长任务底稿.txt
+      - python tasks/wait_for_process.py notepad.exe
+    precondition:
+      - type: process
+        name: notepad.exe
+        should_run: true
+      - type: file_contains
+        path: C:/agent-test/长任务底稿.txt
+        text: 补充一
+        should_contain: false
+    note: >
+      测的是「在长文本里定位到正确位置再操作」。Ctrl+End 一个键就能到，
+      但模型未必想得到，可能改用多次滚动 + 点击——那条路径更长也更容易偏。
+
+  # ------------------------------------------------------------------ #
+  - name: long_replace_word
+    title: 用查找替换改掉文中的词再保存
+    difficulty: 长任务
+    # 人工步数：Ctrl+H → 输入查找词 → Tab → 输入替换词 → 点全部替换
+    #          → 关对话框 → Ctrl+S = 8 步（含对话框内的多次交互）
+    instruction: 记事本里已经打开了 C:\agent-test\长任务替换.txt，把文中所有的「旧词」替换成「新词」，然后保存
+    max_steps: 20
+    success_check:
+      mode: all
+      checks:
+        - type: file_contains
+          path: C:/agent-test/长任务替换.txt
+          text: 新词
+        - type: file_contains
+          path: C:/agent-test/长任务替换.txt
+          text: 旧词
+          should_contain: false
+    reset:
+      - python tasks/reset_desktop.py
+      - taskkill /F /IM notepad.exe /T
+      - taskkill /F /IM msedge.exe /T
+      - python tasks/setup_long_tasks.py
+      - start notepad C:\agent-test\长任务替换.txt
+      - python tasks/wait_for_process.py notepad.exe
+    precondition:
+      - type: process
+        name: notepad.exe
+        should_run: true
+      - type: file_contains
+        path: C:/agent-test/长任务替换.txt
+        text: 旧词
+    note: >
+      **这个任务会打开一个模态对话框**，而 M2 的三次安全事件里有两次
+      都发生在对话框上。它同时测长程能力与对话框里的操作，
+      是三个任务里最可能触发 Reflector 与哨兵的一个。
