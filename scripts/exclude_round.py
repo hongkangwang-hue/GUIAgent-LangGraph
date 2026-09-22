@@ -143,6 +143,13 @@ def main() -> int:
         record["exclusion_reason"] = args.reason.strip()
         action = "已剔除"
 
+    # 剔除 = 事后确认「有人碰了鼠标」，是人工干预率的分子之一。
+    # 存档里若带着安全指标（2026-09-17 之后的存档才有），一并刷新，否则它停在剔除之前的值。
+    if "safety_metrics" in payload:
+        from scripts.run_basic_tasks import safety_metrics
+
+        payload["safety_metrics"] = safety_metrics(records)
+
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"{action}：{record.get('title', args.task)} 第 {args.attempt} 次")

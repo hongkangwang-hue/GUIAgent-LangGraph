@@ -66,6 +66,10 @@ class EmergencyStop:
         self._triggered = threading.Event()
         self._listener = None
         self._triggered_at: float | None = None
+        #: 谁触发的。`hotkey` / `failsafe` 是人，`sentinel:<规则>` 是程序自己。
+        #: **评测要靠它分开「人工干预」与「安全事件」**——两者都让这一轮停下，
+        #: 但前者说明有人在盯着，后者说明没人盯时系统自己刹住了。
+        self._trigger_reason: str = ""
 
     # ------------------------------------------------------------------ #
 
@@ -81,6 +85,11 @@ class EmergencyStop:
     def triggered_at(self) -> float | None:
         """触发时刻，用于计算从按键到实际停止的响应延迟。"""
         return self._triggered_at
+
+    @property
+    def trigger_reason(self) -> str:
+        """触发来源：`hotkey`、`failsafe`、`sentinel:<规则名>` 或调用方给的说明。未触发为空串。"""
+        return self._trigger_reason
 
     # ------------------------------------------------------------------ #
 
@@ -123,19 +132,24 @@ class EmergencyStop:
         """清除触发状态，允许继续执行。**只应由人工确认后调用。**"""
         self._triggered.clear()
         self._triggered_at = None
+        self._trigger_reason = ""
         logger.info("急停状态已复位")
 
     # ------------------------------------------------------------------ #
 
-    def trigger(self) -> None:
-        """以编程方式触发。测试用，也可供上层在检测到异常时主动刹车。"""
-        self._handle_trigger()
+    def trigger(self, reason: str = "programmatic") -> None:
+        """以编程方式触发。测试用，也可供上层在检测到异常时主动刹车。
+
+        `reason` 进存档，用来区分是人按的还是程序自己刹的。
+        """
+        self._handle_trigger(reason)
 
     def raise_if_triggered(self) -> None:
         """已触发则抛 `EmergencyStopped`。每个动作执行前调用。"""
         if self._triggered.is_set():
             raise EmergencyStopped(
-                f"急停已触发（{self.hotkey}），拒绝继续执行。人工确认后调用 reset() 恢复"
+                f"急停已触发（{self._trigger_reason or self.hotkey}），拒绝继续执行。"
+                f"人工确认后调用 reset() 恢复"
             )
 
     def wait(self, timeout: float | None = None) -> bool:
@@ -144,12 +158,14 @@ class EmergencyStop:
 
     # ------------------------------------------------------------------ #
 
-    def _handle_trigger(self) -> None:
+    def _handle_trigger(self, reason: str = "hotkey") -> None:
+        # 默认值是 `hotkey`：pynput 的 GlobalHotKeys 回调不带参数，走的就是这一支。
         if self._triggered.is_set():
             return
+        self._trigger_reason = reason
         self._triggered.set()
         self._triggered_at = time.time()
-        logger.critical("!!! 急停触发 !!! 后续动作全部拒绝执行")
+        logger.critical("!!! 急停触发（%s）!!! 后续动作全部拒绝执行", reason)
         if self._on_trigger is not None:
             try:
                 self._on_trigger()

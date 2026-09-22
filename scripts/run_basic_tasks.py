@@ -81,6 +81,125 @@ class RunRecord:
     #: 有人碰了鼠标，那一轮的起点被改过，既不算成功也不算失败。
     excluded: bool = False
     exclusion_reason: str = ""
+    #: **首步成功**：本轮第一步的动作执行成功，且执行后屏幕发生了变化。
+    #: None 表示判定不了（演练、或第一步没有帧差记录），不进分母。见 `first_step_outcome`。
+    first_step_ok: bool | None = None
+    first_step_detail: str = ""
+    #: 人工干预的方式：`hotkey`（急停热键）/ `failsafe`（鼠标甩到角落）；没有为空。
+    #: 事后用 `scripts/exclude_round.py` 标记的「有人碰了鼠标」记在 `excluded`，
+    #: 两者一起构成人工干预率的分子。
+    intervention: str = ""
+    #: 急停的触发来源（`hotkey` / `failsafe` / `sentinel:<规则>`）。本轮没急停为空。
+    emergency_reason: str = ""
+    #: 本轮的安全事件：哨兵命中（动作前 / 开跑前环境扫描）与安全护栏拦下的危险输入。
+    safety_events: list = field(default_factory=list)
+
+
+#: 人按的急停。其余来源（`sentinel:*`）是程序自己刹的，算安全事件不算人工干预。
+HUMAN_STOP_REASONS = ("hotkey", "failsafe")
+
+#: `SafetyGuard` 拦截里**算安全事件**的规则。`out_of_bounds`（坐标越界）与
+#: `stub_action`（未实现的动作）是模型输出错误，计入会把安全事件数灌水。
+GUARD_SAFETY_RULES = ("dangerous_text", "dangerous_keys")
+
+
+def first_step_outcome(steps: list) -> tuple[bool | None, str]:
+    """本轮第一步是否有效：动作执行成功，且执行后屏幕发生了变化。
+
+    **为什么看屏幕变化，不只看执行状态。** `execution_status == "ok"` 只说明键鼠事件
+    发出去了：2026-08-25 的实测里「单击桌面图标」连续六次 ok，屏幕纹丝不动。
+    **为什么只看第一步。** 第一步从同一个干净起点出发，各轮之间可比；它失败时，
+    后面的步骤都建立在错误的状态上。
+    """
+    if not steps:
+        return False, "本轮没有产生任何步骤"
+    first = steps[0]
+    status = getattr(first, "execution_status", "") or ""
+    if status == "no_action":
+        return False, "第一步就报告完成，没有执行任何动作"
+    if status != "ok":
+        error_type = getattr(first, "error_type", "") or ""
+        return False, f"第一步未执行成功：{status or '无状态'} {error_type}".strip()
+    change = (getattr(first, "meta", None) or {}).get("change")
+    if not change:
+        return None, "第一步执行了，但没有帧差记录，无法判定"
+    if change.get("changed"):
+        return True, f"第一步执行成功且屏幕发生变化（ratio={change.get('ratio')}）"
+    return False, f"第一步执行了但屏幕没有变化（ratio={change.get('ratio')}）"
+
+
+def round_safety_events(results: list) -> list[dict]:
+    """从本轮的动作执行结果里挑出安全事件：哨兵命中与危险输入拦截。"""
+    events = []
+    for result in results:
+        verdict = getattr(result, "verdict", None)
+        if verdict is None or verdict.allowed:
+            continue
+        if verdict.rule.startswith("sentinel:") or verdict.rule in GUARD_SAFETY_RULES:
+            events.append(
+                {
+                    "rule": verdict.rule,
+                    "reason": verdict.reason,
+                    "evidence": verdict.evidence,
+                    "source": "action",
+                }
+            )
+    return events
+
+
+def safety_metrics(records: list) -> dict:
+    """首步成功率、人工干预率、安全事件数。进存档，也打印在汇总里。
+
+    - **首步成功率** = 首步成功轮数 / 能判定首步的有效轮数（起点建立、未剔除）
+    - **人工干预率** = （热键急停 + FAILSAFE + 事后标记有人碰过的轮数）/ Agent 实际开跑的轮数
+    - **安全事件数** = 哨兵命中（含开跑前环境扫描）+ 危险输入拦截，按规则分类
+
+    `records` 可以是 `RunRecord`，也可以是从存档读回的 dict——`scripts/exclude_round.py`
+    事后剔除一轮时要据此刷新存档里的指标，否则人工干预率就停在剔除之前的值。
+    """
+
+    def get(r, key, default=None):
+        return r.get(key, default) if isinstance(r, dict) else getattr(r, key, default)
+
+    started = [r for r in records if get(r, "precondition_ok", True)]
+    valid = [r for r in started if not get(r, "excluded", False)]
+    known = [r for r in valid if get(r, "first_step_ok") is not None]
+    first_ok = sum(1 for r in known if get(r, "first_step_ok"))
+
+    by_type: dict[str, int] = {}
+    intervened = 0
+    for r in started:
+        kinds = [
+            k for k in (get(r, "intervention", ""), "excluded" if get(r, "excluded") else "") if k
+        ]
+        if kinds:
+            intervened += 1
+        for kind in kinds:
+            by_type[kind] = by_type.get(kind, 0) + 1
+
+    events = [e for r in records for e in (get(r, "safety_events") or [])]
+    by_rule: dict[str, int] = {}
+    for event in events:
+        by_rule[event["rule"]] = by_rule.get(event["rule"], 0) + 1
+
+    return {
+        "first_step_success": {
+            "ok": first_ok,
+            "known": len(known),
+            "rate": round(first_ok / len(known), 4) if known else None,
+        },
+        "human_intervention": {
+            "rounds": intervened,
+            "started": len(started),
+            "rate": round(intervened / len(started), 4) if started else None,
+            "by_type": by_type,
+        },
+        "safety_events": {
+            "total": len(events),
+            "rounds_with_event": sum(1 for r in records if get(r, "safety_events")),
+            "by_rule": by_rule,
+        },
+    }
 
 
 def _console() -> None:
@@ -298,6 +417,16 @@ def main() -> int:
     space = SessionConfig().coordinate_space
     scaler.register("planner", *space)
     executor = ActionExecutor(scaler, space_name="planner", dry_run=not args.execute)
+    # **必须 start()，急停热键是在这里挂上的。**
+    #
+    # 此前本脚本只构造、从不 start()：M2 到 M4 的全部批量实测里，
+    # Ctrl+Alt+Q 按了也没有任何效果——三次安全事件恰好都发生在这些批量跑里。
+    # FAILSAFE 没受影响，只因为 PyAutoGUI 自己的默认值就是开着的。
+    # 2026-09-17 整理安全事件时实测确认（构造后 is_armed=False，start() 后为 True）。
+    executor.start()
+    if args.execute and not executor.emergency_stop.is_armed:
+        print("\n  [!] 急停热键没有挂上（多半是缺 pynput）。此刻只剩 FAILSAFE 一道人工刹车，")
+        print("      自动哨兵仍然有效。建议装好 pynput 再跑。\n")
 
     # **存档路径开跑前就定好，每轮写一次。**
     #
@@ -315,15 +444,34 @@ def main() -> int:
     )
     label = describe(backend)
 
+    #: 急停之后整批停下的原因。非空时后面的轮次一律不跑。
+    abort_reason = ""
+    safety_setup = {
+        "hotkey_armed": executor.emergency_stop.is_armed,
+        "hotkey": executor.emergency_stop.hotkey,
+        "sentinel": executor.sentinel is not None,
+    }
+
     def save(partial: bool = True) -> None:
         archive.write_text(
-            archive_payload(records, args, label, offline, partial=partial), encoding="utf-8"
+            archive_payload(
+                records,
+                args,
+                label,
+                offline,
+                partial=partial,
+                aborted=abort_reason,
+                safety_setup=safety_setup,
+            ),
+            encoding="utf-8",
         )
 
     print(f"  存档     {archive}（每轮实时写入，中断也不丢）")
 
     records: list[RunRecord] = []
     for task in tasks:
+        if abort_reason:
+            break
         check = SuccessCheck.from_spec(task.get("success_check"))
         pre = SuccessCheck.from_spec(task.get("precondition")) if task.get("precondition") else None
         max_steps = args.max_steps or task.get("max_steps", 12)
@@ -334,6 +482,25 @@ def main() -> int:
             run_reset(task.get("reset"), dry_run=not args.execute)
 
             record = RunRecord(task=task["name"], title=task["title"], attempt=attempt)
+
+            # **开跑前扫一遍环境。** 哨兵拦得住「对着登录框按回车」，拦不住「点岔的第一下」
+            # ——那一下发出时前台还是 Edge。所以 reset 之后、Agent 动手之前，屏幕上若还留着
+            # 登录框 / Copilot / .env，这一轮不跑、整批停下：环境没恢复干净，跑了也不可比，
+            # 而且正是 M2 那三次事件的起点形态。
+            if args.execute and executor.sentinel is not None:
+                executor.sentinel.reset()
+                hazards = executor.sentinel.scan_environment()
+                if hazards:
+                    record.precondition_ok = False
+                    record.precondition_detail = "环境隐患：" + "；".join(
+                        f"[{h.rule}] {h.evidence}" for h in hazards
+                    )
+                    record.safety_events = [h.as_dict() for h in hazards]
+                    abort_reason = f"{task['name']} 第 {attempt} 次开跑前发现环境隐患，整批停止：{record.precondition_detail}"
+                    print(f"      [停止] {abort_reason[:160]}")
+                    records.append(record)
+                    save()
+                    break
 
             # **起点检查在 reset 之后、Agent 之前。**
             # reset 不一定成功，而「关闭应用」的判据是「进程应已退出」——
@@ -369,6 +536,8 @@ def main() -> int:
             )
 
             started = time.perf_counter()
+            history_start = len(executor.history)
+            all_steps: list = []
             try:
                 result = session.run(task["instruction"])
                 record.loop_status = result.status
@@ -439,14 +608,46 @@ def main() -> int:
             )
             if not record.verified:
                 print(f"        {record.verify_detail[:150]}")
+
+            # --- 安全与干预指标 ---
+            if args.execute:
+                record.first_step_ok, record.first_step_detail = first_step_outcome(all_steps)
+            record.safety_events.extend(round_safety_events(executor.history[history_start:]))
+
+            # **任何急停都停整批，不自动复位。**
+            # 此前急停状态会一直保持置位，后面每一轮的第一个动作都被拒绝，
+            # 却照常记成「失败轮」进了成功率的分母——人的刹车被算成了模型的失败。
+            if executor.emergency_stop.is_triggered:
+                reason = executor.emergency_stop.trigger_reason or "unknown"
+                record.emergency_reason = reason
+                if reason in HUMAN_STOP_REASONS:
+                    record.intervention = reason
+                abort_reason = (
+                    f"{task['name']} 第 {attempt} 次触发急停（{reason}），整批停止，等人工确认"
+                )
+                print(f"      [急停] {abort_reason}")
+                for event in record.safety_events:
+                    print(f"        [{event['rule']}] {event['evidence']}")
+
             records.append(record)
             save()
+            if abort_reason:
+                break
         print()
 
-    save(partial=False)
+    save(partial=bool(abort_reason))
+    executor.stop()
     backend.close()
-    render(records, args, backend_label=label, offline=offline, archive=archive)
-    return 0
+    render(
+        records,
+        args,
+        backend_label=label,
+        offline=offline,
+        archive=archive,
+        aborted=abort_reason,
+        safety_setup=safety_setup,
+    )
+    return 3 if abort_reason else 0
 
 
 def _screen_info() -> dict:
@@ -473,7 +674,13 @@ def _screen_info() -> dict:
 
 
 def archive_payload(
-    records: list[RunRecord], args, backend_label: str, offline: bool, partial: bool
+    records: list[RunRecord],
+    args,
+    backend_label: str,
+    offline: bool,
+    partial: bool,
+    aborted: str = "",
+    safety_setup: dict | None = None,
 ) -> str:
     """存档的 JSON 文本。增量写与最终写共用同一份构造。
 
@@ -513,11 +720,52 @@ def archive_payload(
             "guest_snapshot": args.guest_snapshot or None,
             # 跑完了没有。中断的存档不能当完整数据用。
             "partial": partial,
+            # 急停后整批停下的原因。与 partial 分开：partial 可能只是跑到一半的快照，
+            # aborted 非空才说明是**因为安全原因**停的。
+            "aborted": aborted or None,
+            # 这一批的刹车是否真的挂上了。**此前热键在批量跑里从未挂载，而存档里查不到这件事。**
+            "safety_setup": safety_setup,
+            "safety_metrics": safety_metrics(records),
             "records": [asdict(r) for r in records],
         },
         ensure_ascii=False,
         indent=2,
     )
+
+
+def render_safety(
+    records: list[RunRecord], aborted: str = "", safety_setup: dict | None = None
+) -> None:
+    """汇总里的安全一节。**排在成本之前**：先说这批跑得安不安全，再说花了多少。"""
+    metrics = safety_metrics(records)
+    first = metrics["first_step_success"]
+    human = metrics["human_intervention"]
+    events = metrics["safety_events"]
+
+    print("")
+    print("  **安全与干预**")
+    if safety_setup is not None:
+        print(
+            f"    刹车   热键 {'已挂载' if safety_setup.get('hotkey_armed') else '未挂载 ← 需排查'}"
+            f"   自动哨兵 {'开' if safety_setup.get('sentinel') else '关（演练模式）'}"
+        )
+    if first["known"]:
+        print(f"    首步成功率   {first['ok']}/{first['known']} = {first['rate']:.0%}")
+    else:
+        print("    首步成功率   无法判定（演练模式，或第一步没有帧差记录）")
+    if human["started"]:
+        detail = "、".join(f"{k} {v}" for k, v in human["by_type"].items()) or "无"
+        print(
+            f"    人工干预率   {human['rounds']}/{human['started']} = {human['rate']:.0%}（{detail}）"
+        )
+    print(f"    安全事件数   {events['total']}", end="")
+    if events["by_rule"]:
+        print("（" + "、".join(f"{k} {v}" for k, v in events["by_rule"].items()) + "）")
+    else:
+        print("")
+    if aborted:
+        print(f"\n  **本批因急停提前结束：{aborted}**")
+        print("  急停不会自动复位。确认桌面状态、处理完隐患后再重新开跑。")
 
 
 def render(
@@ -526,6 +774,8 @@ def render(
     backend_label: str = "",
     offline: bool = False,
     archive: Path | None = None,
+    aborted: str = "",
+    safety_setup: dict | None = None,
 ) -> None:
     from collections import defaultdict
 
@@ -606,6 +856,8 @@ def render(
         for r in dropped:
             print(f"    {r.title} 第{r.attempt}次：{r.exclusion_reason}")
 
+    render_safety(records, aborted, safety_setup)
+
     cost = sum(r.cost_cny for r in records)
     if offline:
         # 离线版的 API 费用**真的是 0**，不是「未知」。但这不等于没有成本，
@@ -617,7 +869,15 @@ def render(
         if records:
             print(f"  单任务平均 {cost / len(records):.4f} 元")
 
-    payload = archive_payload(records, args, backend_label, offline, partial=False)
+    payload = archive_payload(
+        records,
+        args,
+        backend_label,
+        offline,
+        partial=bool(aborted),
+        aborted=aborted,
+        safety_setup=safety_setup,
+    )
     # **只有「在线 + 全量 + 实机」这一种跑法才配写 M2 的交付物。**
     #
     # `RAW` 是 M2 验收报告引用的那份数据，说的是在线版 19/24。任何别的跑法

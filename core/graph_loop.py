@@ -422,12 +422,16 @@ class GraphAgentLoop(AgentLoop):
             latency.screenshot_ms += (time.perf_counter() - start) * 1000.0
             record.screenshot_after = self._save_frame(after, step_index, "after")
 
-        # 两个开关共用这一次帧差
-        if self.config.escalate_on_no_change or self.config.reflector:
+        # 两个开关共用这一次帧差。拍到了执行后的截图就**一律记下**，
+        # 开关只决定要不要据此改变行为——「首步成功率」要看第一个动作有没有让
+        # 屏幕变化，而评测默认两个开关都关。逐字对应 `AgentLoop._run_one_step`
+        # 第 7.5 段：两份实现之间的差异只允许在编排上，不允许在单步逻辑上。
+        if after is not None or self.config.escalate_on_no_change or self.config.reflector:
             from perception.change import compare
 
             report = compare(before, after, self.config.change_threshold)
             record.meta["change"] = report.as_dict()
+        if self.config.escalate_on_no_change or self.config.reflector:
             changed = report.changed if after is not None else None
             if self.config.escalate_on_no_change:
                 self.retry_policy.observe(

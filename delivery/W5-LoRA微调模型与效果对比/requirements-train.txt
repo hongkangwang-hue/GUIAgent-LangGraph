@@ -1,0 +1,20 @@
+﻿# 第 5 周交付 —— 重新训练 / 重跑评测所需的依赖
+#
+#     pip install -r requirements.txt -r requirements-train.txt
+#
+# **需要 CUDA GPU。** bitsandbytes 在没有 CUDA 的机器上装不上或无法使用。
+# 训练在租用的 RTX 4090 上完成，那台服务器的包版本**没有留下记录**；
+# 下面的版本号是开发机 conda 环境 `gui-agent` 里实际装着的版本，
+# 其中 peft 0.20.0 与权重 adapter_config.json 里记录的 peft_version 一致。
+#
+# torch 请按本机 CUDA 版本从 https://pytorch.org 选择对应的安装命令，
+# 不要直接 pip install torch（默认可能装成 CPU 版）。
+
+torch>=2.2                 # 开发机 2.11.0+cu128
+transformers>=4.49         # 开发机 5.15.1；需要 Qwen2_5_VLForConditionalGeneration
+peft>=0.13                 # 开发机 0.20.0，与 adapter 记录一致
+bitsandbytes>=0.43         # 4-bit NF4 量化；开发机 0.50.1
+accelerate>=0.34           # 开发机 1.14.0
+datasets>=2.20             # 开发机 5.0.1
+qwen-vl-utils>=0.0.8       # 开发机 0.0.14
+safetensors>=0.4           # 开发机 0.8.0

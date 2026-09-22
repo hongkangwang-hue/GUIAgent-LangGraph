@@ -76,3 +76,9 @@ finetune/data/val-upscaled-coords.jsonl
 GUI_Agent_大厂面试深挖指南_复核完善版.md
 必备知识手册.md
 面试答案.md
+
+# LoRA 权重不进任何仓库。两个仓库都是**公开**的，而 Qwen2.5-VL 的
+# qwen-research 许可证限制再分发；GitHub 单文件上限 100MB 也过不去
+# （adapter_model.safetensors 实测 142MB）。
+# 权重的本地备份在 D:\GUIAgent-权重备份\，带 MD5 校验。
+delivery/**/模型权重/

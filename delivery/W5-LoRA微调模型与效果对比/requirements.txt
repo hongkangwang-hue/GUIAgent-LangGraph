@@ -1,0 +1,21 @@
+﻿# 第 5 周交付 —— 跑单元测试与复算报告所需的依赖
+#
+#     pip install -r requirements.txt
+#     python -m pytest
+#     python scripts/recompute_report.py      （这一步只用标准库，不装也能跑）
+#
+# 这份清单**只装跑测试要用的东西**，不需要 GPU、不需要模型权重。
+# 要重新训练或重跑评测，另见 `requirements-train.txt`（含 torch，体积以 GB 计）。
+#
+# 边界是在空虚拟环境里**实测**出来的，不是照 import 语句猜的：逐个卸掉一个包再跑测试，
+# 每行右边写着卸掉它的后果。源仓库里这批测试还会连带导入 langchain-core 与 psutil，
+# 实测卸掉两者仍是 95 passed，所以没有列入。
+
+pytest>=8.0
+pytest-cov>=5.0
+numpy>=1.24                # 去掉：2 errors（收集阶段就失败）
+pyyaml>=6.0                # 去掉：5 failed（提示词模板是 YAML）
+opencv-python>=4.9         # 去掉：1 failed
+pillow>=10.0               # 去掉：**不报错**，而是 73 passed / 1 skipped——
+                           # test_resolution_ablation.py 整个文件被 importorskip
+                           # 静默跳过 22 条。只看 "passed" 会以为一切正常，最危险的一项。

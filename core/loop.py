@@ -459,11 +459,16 @@ class AgentLoop:
         # --- 7.5 这一步到底有没有用 ---
         # **两个开关共用这一次帧差。** Reflector 的级联 1 就是帧差，
         # 重复算一次纯属浪费；分别算还可能因为取帧时机不同得出不同结论。
-        if self.config.escalate_on_no_change or self.config.reflector:
+        #
+        # 拍到了执行后的截图就**一律记下**帧差，开关只决定要不要据此改变行为。
+        # 「首步成功率」要看第一个动作有没有让屏幕变化，而评测默认两个开关都关——
+        # 只在开关打开时才记，这个指标在基线轮次里就永远算不出来。帧差是毫秒级的纯读操作。
+        if after is not None or self.config.escalate_on_no_change or self.config.reflector:
             from perception.change import compare
 
             report = compare(before, after, self.config.change_threshold)
             record.meta["change"] = report.as_dict()
+        if self.config.escalate_on_no_change or self.config.reflector:
             changed = report.changed if after is not None else None
             if self.config.escalate_on_no_change:
                 self.retry_policy.observe(

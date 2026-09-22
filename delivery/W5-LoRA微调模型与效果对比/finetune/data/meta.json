@@ -1,0 +1,37 @@
+{
+  "objective": "action_generation",
+  "split_file": "docs\\m3-prereq\\split-screenagent-desktop.json",
+  "fingerprint": "c1fd6437d3df7178",
+  "seed": 20260913,
+  "group_by": "session",
+  "expected": {
+    "train": 2518,
+    "val": 524
+  },
+  "built": {
+    "train": 1783,
+    "val": 375
+  },
+  "dropped": {
+    "train": 735,
+    "val": 149
+  },
+  "action_dist": {
+    "left_click": 520,
+    "type": 216,
+    "key": 254,
+    "done": 897,
+    "scroll": 41,
+    "mouse_move": 74,
+    "double_click": 91,
+    "wait": 65
+  },
+  "coord_space": [
+    1000,
+    1000
+  ],
+  "files": {
+    "train": "finetune\\data\\train.jsonl",
+    "val": "finetune\\data\\val.jsonl"
+  }
+}
