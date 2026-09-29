@@ -121,6 +121,10 @@ class ActionExecutor:
         self.dry_run = dry_run
         self.history: list[ActionResult] = []
         self._pyautogui = None
+        # TYPE 通过 Ctrl+V 输入。剪贴板必须保留到浏览器处理完粘贴事件；
+        # 旧实现 50ms 后就恢复原文，可能使 VMware 客机把原先复制的命令粘进搜索框。
+        self._clipboard_original: str | None = None
+        self._clipboard_last: str | None = None
 
     # ------------------------------------------------------------------ #
     # 生命周期
@@ -138,7 +142,10 @@ class ActionExecutor:
             pyautogui.PAUSE = 0.0
 
     def stop(self) -> None:
-        self.emergency_stop.disarm()
+        try:
+            self._restore_clipboard()
+        finally:
+            self.emergency_stop.disarm()
 
     def __enter__(self) -> ActionExecutor:
         self.start()
@@ -371,20 +378,18 @@ class ActionExecutor:
         try:
             import pyperclip
 
-            original = ""
-            with contextlib.suppress(Exception):  # 剪贴板可能被其他进程独占
-                original = pyperclip.paste()
-
+            if self._clipboard_last is None:
+                with contextlib.suppress(Exception):  # 剪贴板可能被其他进程独占
+                    self._clipboard_original = pyperclip.paste()
             pyperclip.copy(text)
-            time.sleep(0.05)  # 给剪贴板一点时间落定，否则偶发粘贴到旧内容
+            self._clipboard_last = text
+            time.sleep(0.05)  # 等待剪贴板更新，不在 Ctrl+V 后立即恢复原文
+            if pyperclip.paste() != text:
+                raise RuntimeError("剪贴板在粘贴前被其他程序改写，已取消输入")
             pyautogui.hotkey("ctrl", "v")
+            if pyperclip.paste() != text:
+                raise RuntimeError("剪贴板在粘贴时被其他程序改写，请检查 VMware 共享剪贴板")
             result.meta["input_method"] = "clipboard"
-
-            # 还原剪贴板，避免污染用户环境（也避免下一次粘贴拿到本次内容）
-            if original:
-                time.sleep(0.05)
-                with contextlib.suppress(Exception):
-                    pyperclip.copy(original)
 
         except ImportError:
             if not text.isascii():
@@ -393,6 +398,20 @@ class ActionExecutor:
                 ) from None
             pyautogui.typewrite(text, interval=0.02)
             result.meta["input_method"] = "typewrite"
+
+    def _restore_clipboard(self) -> None:
+        """整批运行结束后再还原；用户期间改过剪贴板时不覆盖用户的新内容。"""
+        try:
+            if self._clipboard_last is not None and self._clipboard_original is not None:
+                import pyperclip
+
+                if pyperclip.paste() == self._clipboard_last:
+                    pyperclip.copy(self._clipboard_original)
+        except Exception:  # noqa: BLE001 —— 剪贴板被占用时不妨碍急停卸载
+            logger.warning("未能恢复运行前的剪贴板内容")
+        finally:
+            self._clipboard_original = None
+            self._clipboard_last = None
 
     def _interruptible_sleep(self, seconds: float) -> None:
         """可被急停打断的等待。

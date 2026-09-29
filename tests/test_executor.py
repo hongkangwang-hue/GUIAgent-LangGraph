@@ -7,11 +7,14 @@
 
 from __future__ import annotations
 
+import sys
+from types import SimpleNamespace
+
 import pytest
 
 from control.actions import Action, ActionType
 from control.emergency_stop import EmergencyStop, EmergencyStopped
-from control.executor import ActionExecutor
+from control.executor import ActionExecutor, ActionResult
 from control.safety import SafetyGuard
 from perception.coordinate import CoordinateScaler
 from perception.types import BBox, Point
@@ -24,6 +27,58 @@ def executor() -> ActionExecutor:
     scaler = CoordinateScaler(SCREEN)
     scaler.register("planner", 1024, 768)
     return ActionExecutor(scaler, space_name="planner", dry_run=True)
+
+
+def test_type_keeps_clipboard_until_paste_has_been_processed(
+    executor: ActionExecutor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """模拟 Edge 延后读取 Ctrl+V：不能读到运行前复制的 PowerShell 命令。"""
+    original = "cd C:\\Users\\22900\\GUIAgent-LangGraph\ngit pull origin main"
+    clipboard = {"text": original}
+    queued_pastes: list = []
+    fake_clipboard = SimpleNamespace(
+        copy=lambda value: clipboard.__setitem__("text", value),
+        paste=lambda: clipboard["text"],
+    )
+    monkeypatch.setitem(sys.modules, "pyperclip", fake_clipboard)
+    monkeypatch.setattr("control.executor.time.sleep", lambda _: None)
+    executor._pyautogui = SimpleNamespace(
+        hotkey=lambda *_: queued_pastes.append(lambda: clipboard["text"])
+    )
+    result = ActionResult(Action(ActionType.TYPE, text="Python 官方文档"), False)
+
+    executor._type_text("Python 官方文档", result)
+    assert len(queued_pastes) == 1
+    assert queued_pastes[0]() == "Python 官方文档"
+    assert clipboard["text"] == "Python 官方文档"
+
+    executor.stop()
+    assert clipboard["text"] == original
+
+
+def test_type_rejects_clipboard_changed_by_another_program(
+    executor: ActionExecutor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """VMware 共享剪贴板若覆盖搜索词，应在 Ctrl+V 前失败而非粘错文本。"""
+    clipboard = {"text": "原内容"}
+
+    def copy_then_overwrite(_: str) -> None:
+        clipboard["text"] = "外部覆盖"
+
+    monkeypatch.setitem(
+        sys.modules,
+        "pyperclip",
+        SimpleNamespace(copy=copy_then_overwrite, paste=lambda: clipboard["text"]),
+    )
+    monkeypatch.setattr("control.executor.time.sleep", lambda _: None)
+    pasted: list[tuple[str, ...]] = []
+    executor._pyautogui = SimpleNamespace(hotkey=lambda *keys: pasted.append(keys))
+
+    executor.dry_run = False
+    result = executor.execute(Action(ActionType.TYPE, text="Python 官方文档"))
+    assert not result.success
+    assert "粘贴前被其他程序改写" in result.error
+    assert pasted == []
 
 
 # --------------------------------------------------------------------- #
@@ -47,9 +102,7 @@ def test_real_point_appears_in_log_payload(executor: ActionExecutor) -> None:
 
 
 def test_drag_records_both_endpoints(executor: ActionExecutor) -> None:
-    result = executor.execute(
-        Action(ActionType.LEFT_CLICK_DRAG, x=100, y=100, to_x=500, to_y=400)
-    )
+    result = executor.execute(Action(ActionType.LEFT_CLICK_DRAG, x=100, y=100, to_x=500, to_y=400))
     assert result.real_point is not None and result.real_point_to is not None
     assert result.real_point_to.x > result.real_point.x
 
@@ -185,6 +238,7 @@ def test_emergency_stop_fires_callback() -> None:
 
 def test_emergency_stop_callback_error_does_not_break_stop() -> None:
     """回调里出错不能让急停本身失效——那是最不能失效的东西。"""
+
     def boom() -> None:
         raise RuntimeError("回调炸了")
 
