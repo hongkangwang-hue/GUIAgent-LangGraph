@@ -156,6 +156,57 @@ class SubTask:
         return {"id": self.id, "goal": self.goal, "expected": self.expected}
 
 
+_SEARCH_QUERY = re.compile(r"搜索[「『“\"']([^」』”\"']+)[」』”\"']")
+_ADDRESS_FOCUS = re.compile(r"^(?:点击|单击|点选|聚焦).{0,24}地址栏")
+
+
+def _merge_search_address_focus(
+    instruction: str, subtasks: list[SubTask]
+) -> tuple[list[SubTask], list[dict]]:
+    """把不可观测的「点击地址栏」并入紧随其后的输入目标。
+
+    W4 的搜索任务在 legacy 下 0/5，LangGraph 下也卡在同一步：地址栏已
+    聚焦时再次点击几乎不改变截图，模型会连续点击到步数耗尽。只处理
+    明确写出搜索词、且相邻两步确实是聚焦地址栏和输入该词的计划。
+    """
+    match = _SEARCH_QUERY.search(instruction)
+    if match is None:
+        return subtasks, []
+    query = match.group(1)
+    merged: list[SubTask] = []
+    repairs: list[dict] = []
+    index = 0
+    while index < len(subtasks):
+        current = subtasks[index]
+        following = subtasks[index + 1] if index + 1 < len(subtasks) else None
+        if (
+            following is not None
+            and _ADDRESS_FOCUS.search(current.goal)
+            and re.search(r"输入|键入", following.goal)
+            and query in following.goal
+        ):
+            goal = f"在浏览器地址栏输入「{query}」"
+            merged.append(
+                SubTask(
+                    id=len(merged) + 1,
+                    goal=goal,
+                    expected=f"地址栏显示「{query}」",
+                )
+            )
+            repairs.append(
+                {
+                    "rule": "merge_search_address_focus",
+                    "before": [current.goal, following.goal],
+                    "after": goal,
+                }
+            )
+            index += 2
+            continue
+        merged.append(SubTask(id=len(merged) + 1, goal=current.goal, expected=current.expected))
+        index += 1
+    return merged, repairs
+
+
 @dataclass
 class Plan:
     """一次拆解的完整结果。"""
@@ -171,6 +222,8 @@ class Plan:
     prompt: dict = field(default_factory=dict)
     #: 被截断掉的子任务数（超过 MAX_SUBTASKS 时）
     truncated: int = 0
+    #: 规划阶段针对不可观测目标做过的确定性修正，进轨迹供复盘。
+    repairs: list[dict] = field(default_factory=list)
 
     def goals(self) -> list[str]:
         return [s.goal for s in self.subtasks]
@@ -181,6 +234,7 @@ class Plan:
             "subtasks": [s.as_dict() for s in self.subtasks],
             "prompt": dict(self.prompt),
             "truncated": self.truncated,
+            "repairs": list(self.repairs),
             "cost_cny": round(self.cost_cny, 6),
         }
 
@@ -309,6 +363,9 @@ class Planner:
         latency_ms = (time.perf_counter() - start) * 1000.0
 
         subtasks, truncated = self._parse(raw.text)
+        repairs: list[dict] = []
+        if "observable_search_goal" in self.template.features:
+            subtasks, repairs = _merge_search_address_focus(instruction.strip(), subtasks)
         plan = Plan(
             instruction=instruction.strip(),
             subtasks=subtasks,
@@ -319,6 +376,7 @@ class Planner:
             request_id=raw.request_id,
             prompt=self.template.as_dict(),
             truncated=truncated,
+            repairs=repairs,
         )
 
         warnings = plan.granularity_report()

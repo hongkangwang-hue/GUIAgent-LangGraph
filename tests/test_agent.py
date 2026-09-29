@@ -148,9 +148,10 @@ def test_few_shot_outputs_are_parseable() -> None:
 def test_planner_few_shot_outputs_are_parseable() -> None:
     from llm.parsing import extract_json
 
-    for example in load_template("planner_v1").few_shot:
-        data = extract_json(example.output)
-        assert isinstance(data.get("subtasks"), list)
+    for template_name in ("planner_v1", "planner_v3"):
+        for example in load_template(template_name).few_shot:
+            data = extract_json(example.output)
+            assert isinstance(data.get("subtasks"), list)
 
 
 def test_template_records_version_for_ablation() -> None:
@@ -238,6 +239,42 @@ def test_plan_truncates_beyond_limit() -> None:
 def test_plan_records_prompt_version() -> None:
     plan = Planner(_plan_backend('{"subtasks":[{"goal":"甲"}]}')).plan("x")
     assert plan.prompt["name"] == "planner_v1"
+
+
+def test_search_plan_merges_unobservable_address_click() -> None:
+    """复现 W4：独立的地址栏点击会让执行器一直点击，输入永远不会执行。"""
+    raw = (
+        '{"subtasks":['
+        '{"goal":"双击桌面的 Microsoft Edge 图标","expected":"Edge 窗口出现"},'
+        '{"goal":"点击浏览器地址栏","expected":"地址栏获得焦点"},'
+        '{"goal":"输入文字「Python 官方文档」","expected":"文字出现"},'
+        '{"goal":"按回车键","expected":"搜索结果出现"}]}'
+    )
+    instruction = "打开 Microsoft Edge，在地址栏搜索「Python 官方文档」"
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v3")).plan(instruction)
+
+    assert plan.goals() == [
+        "双击桌面的 Microsoft Edge 图标",
+        "在浏览器地址栏输入「Python 官方文档」",
+        "按回车键",
+    ]
+    assert [step.id for step in plan.subtasks] == [1, 2, 3]
+    assert plan.subtasks[1].expected == "地址栏显示「Python 官方文档」"
+    assert plan.as_dict()["repairs"][0]["rule"] == "merge_search_address_focus"
+
+    baseline = Planner(_plan_backend(raw), template=load_template("planner_v1")).plan(instruction)
+    assert baseline.goals()[1] == "点击浏览器地址栏"
+    assert baseline.repairs == []
+
+
+def test_search_plan_does_not_merge_a_different_query() -> None:
+    """只有紧邻点击地址栏、并输入用户指定搜索词时才修正计划。"""
+    raw = '{"subtasks":[{"goal":"点击地址栏"},{"goal":"输入文字「其他内容」"}]}'
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v3")).plan(
+        "搜索「Python 官方文档」"
+    )
+    assert plan.goals() == ["点击地址栏", "输入文字「其他内容」"]
+    assert plan.repairs == []
 
 
 def test_plan_cost_joins_the_backend_account() -> None:
