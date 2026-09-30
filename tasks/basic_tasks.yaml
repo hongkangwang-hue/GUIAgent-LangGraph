@@ -181,12 +181,13 @@ tasks:
     difficulty: 多步
     instruction: 在「测试消息」程序里发送一条内容为「你好世界」的消息
     max_steps: 12
-    # **这是最可靠的一条判据**：查的是任务真正产生的副作用（写进文件的
-    # 那行字），不受窗口 Z 序、焦点、渲染时机影响。
+    # 检查任务真正产生的副作用，且只允许出现一次。旧版只查「包含」，
+    # 回车发送后又点击发送的重复消息也会被判成功。
     success_check:
       - type: file_contains
         path: C:/agent-test/messages.log
         text: 你好世界
+        exact_count: 1
     reset:
       # 先清场：上一轮留下的记事本会让模型整条轨迹都以为自己在操作记事本。
       - python tasks/reset_desktop.py

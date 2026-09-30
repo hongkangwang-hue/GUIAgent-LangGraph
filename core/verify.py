@@ -175,7 +175,11 @@ def check_window_title(pattern: str, regex: bool = False, should_match: bool = T
 
 
 def check_file_contains(
-    path: str, text: str, encoding: str = "utf-8", should_contain: bool = True
+    path: str,
+    text: str,
+    encoding: str = "utf-8",
+    should_contain: bool = True,
+    exact_count: int | None = None,
 ) -> CheckResult:
     """文件存在且含（或不含）指定文本。
 
@@ -186,6 +190,9 @@ def check_file_contains(
     日志里不该已经有「你好世界」——上一轮的内容若没被 reset 清掉，
     Agent 什么都不做判据也会打勾。`check_process` 早就有这个反方向
     （`should_run=False`），这里补齐。
+
+    ``exact_count`` 是给「发送一条消息」用的：仅判断包含会把重复发送两次
+    也判成成功。未配置时保持原有包含语义，历史批次不受影响。
     """
     target = Path(path)
     if not target.exists():
@@ -198,6 +205,13 @@ def check_file_contains(
         content = target.read_text(encoding=encoding, errors="replace")
     except OSError as exc:
         return CheckResult(False, f"读不出 {target}：{exc}", "file_contains")
+    if exact_count is not None:
+        count = content.count(text)
+        return CheckResult(
+            count == exact_count,
+            f"{target.name} 中 {text!r} 出现 {count} 次（要求 {exact_count} 次）",
+            "file_contains",
+        )
     if (text in content) == should_contain:
         verb = "含" if should_contain else "不含"
         return CheckResult(True, f"{target.name} {verb} {text!r}", "file_contains")

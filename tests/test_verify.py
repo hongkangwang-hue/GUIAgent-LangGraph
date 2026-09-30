@@ -47,6 +47,19 @@ class TestFileContainsNegation:
         assert inspect.signature(check_file_contains).parameters["should_contain"].default is True
 
 
+def test_file_contains_exact_count_rejects_duplicate_message(tmp_path):
+    from core.verify import check_file_contains
+
+    log = tmp_path / "messages.log"
+    log.write_text("[12:00:00] 你好世界\n", encoding="utf-8")
+    assert check_file_contains(str(log), "你好世界", exact_count=1).passed
+
+    log.write_text("[12:00:00] 你好世界\n[12:00:01] 你好世界\n", encoding="utf-8")
+    result = check_file_contains(str(log), "你好世界", exact_count=1)
+    assert not result.passed
+    assert "出现 2 次" in result.detail
+
+
 class TestTaskPreconditions:
     """任务清单里每个任务的起点检查都必须**反向**覆盖它的判据。
 

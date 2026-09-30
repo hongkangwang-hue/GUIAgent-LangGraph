@@ -148,7 +148,7 @@ def test_few_shot_outputs_are_parseable() -> None:
 def test_planner_few_shot_outputs_are_parseable() -> None:
     from llm.parsing import extract_json
 
-    for template_name in ("planner_v1", "planner_v3"):
+    for template_name in ("planner_v1", "planner_v3", "planner_v4"):
         for example in load_template(template_name).few_shot:
             data = extract_json(example.output)
             assert isinstance(data.get("subtasks"), list)
@@ -274,6 +274,43 @@ def test_search_plan_does_not_merge_a_different_query() -> None:
         "搜索「Python 官方文档」"
     )
     assert plan.goals() == ["点击地址栏", "输入文字「其他内容」"]
+    assert plan.repairs == []
+
+
+def test_message_send_is_one_transaction_in_new_template() -> None:
+    """历史计划在消息已被回车发送后仍要求点击发送，造成重复发送与空转。"""
+    raw = (
+        '{"subtasks":['
+        '{"goal":"点击消息输入框","expected":"光标出现"},'
+        '{"goal":"输入文本「你好世界」","expected":"输入框显示文本"},'
+        '{"goal":"点击发送按钮","expected":"消息出现在列表"}]}'
+    )
+    instruction = "在「测试消息」程序里发送一条内容为「你好世界」的消息"
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(instruction)
+
+    assert plan.goals() == ["在「测试消息」输入「你好世界」并发送一次，消息列表出现后结束"]
+    assert plan.subtasks[0].expected == "消息列表显示一条「你好世界」"
+    assert plan.repairs[0]["rule"] == "merge_message_send"
+    assert len(plan.repairs[0]["before"]) == 3
+
+    baseline = Planner(_plan_backend(raw), template=load_template("planner_v3")).plan(instruction)
+    assert len(baseline.subtasks) == 3
+
+
+def test_message_plan_repairs_missing_submit_step() -> None:
+    raw = '{"subtasks":[{"goal":"输入文本「你好世界」"}]}'
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(
+        "在「测试消息」程序里发送一条内容为「你好世界」的消息"
+    )
+    assert plan.goals() == ["在「测试消息」输入「你好世界」并发送一次，消息列表出现后结束"]
+
+
+def test_message_plan_does_not_rewrite_unrelated_input() -> None:
+    raw = '{"subtasks":[{"goal":"输入文本「其他内容」"},{"goal":"点击发送按钮"}]}'
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(
+        "在「测试消息」程序里发送一条内容为「你好世界」的消息"
+    )
+    assert plan.goals() == ["输入文本「其他内容」", "点击发送按钮"]
     assert plan.repairs == []
 
 

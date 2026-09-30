@@ -158,6 +158,11 @@ class SubTask:
 
 _SEARCH_QUERY = re.compile(r"搜索[「『“\"']([^」』”\"']+)[」』”\"']")
 _ADDRESS_FOCUS = re.compile(r"^(?:点击|单击|点选|聚焦).{0,24}地址栏")
+_MESSAGE_REQUEST = re.compile(
+    r"在[「『“\"']([^」』”\"']+)[」』”\"']程序里发送一条内容为"
+    r"[「『“\"']([^」』”\"']+)[」』”\"']的消息"
+)
+_MESSAGE_FOCUS = re.compile(r"^(?:点击|单击|点选|聚焦).{0,24}(?:消息|文本)?输入框")
 
 
 def _merge_search_address_focus(
@@ -205,6 +210,54 @@ def _merge_search_address_focus(
         merged.append(SubTask(id=len(merged) + 1, goal=current.goal, expected=current.expected))
         index += 1
     return merged, repairs
+
+
+def _merge_message_send(
+    instruction: str, subtasks: list[SubTask]
+) -> tuple[list[SubTask], list[dict]]:
+    """把消息输入及后续提交合成一个以可见发送结果为终点的目标。
+
+    旧计划拆成「点击输入框 → 输入文字 → 点击发送」。执行器有时在输入阶段
+    已按回车发送（模拟程序支持回车），下一子任务仍会继续点发送，导致
+    重复发送或耗尽步数。只处理明确指定程序和正文、且计划包含该正文输入
+    的单消息指令。提交之后没有别的用户要求，丢弃尾部的重复提交步骤。
+    """
+    request = _MESSAGE_REQUEST.search(instruction)
+    if request is None:
+        return subtasks, []
+    app, body = request.groups()
+    input_index = next(
+        (
+            index
+            for index, task in enumerate(subtasks)
+            if re.search(r"输入|键入|填写", task.goal) and body in task.goal
+        ),
+        None,
+    )
+    if input_index is None:
+        return subtasks, []
+    start = input_index
+    if start > 0 and _MESSAGE_FOCUS.search(subtasks[start - 1].goal):
+        start -= 1
+    goal = f"在「{app}」输入「{body}」并发送一次，消息列表出现后结束"
+    repaired = [
+        SubTask(id=index + 1, goal=task.goal, expected=task.expected)
+        for index, task in enumerate(subtasks[:start])
+    ]
+    repaired.append(
+        SubTask(
+            id=len(repaired) + 1,
+            goal=goal,
+            expected=f"消息列表显示一条「{body}」",
+        )
+    )
+    return repaired, [
+        {
+            "rule": "merge_message_send",
+            "before": [task.goal for task in subtasks[start:]],
+            "after": goal,
+        }
+    ]
 
 
 @dataclass
@@ -365,7 +418,11 @@ class Planner:
         subtasks, truncated = self._parse(raw.text)
         repairs: list[dict] = []
         if "observable_search_goal" in self.template.features:
-            subtasks, repairs = _merge_search_address_focus(instruction.strip(), subtasks)
+            subtasks, new_repairs = _merge_search_address_focus(instruction.strip(), subtasks)
+            repairs.extend(new_repairs)
+        if "atomic_message_send" in self.template.features:
+            subtasks, new_repairs = _merge_message_send(instruction.strip(), subtasks)
+            repairs.extend(new_repairs)
         plan = Plan(
             instruction=instruction.strip(),
             subtasks=subtasks,

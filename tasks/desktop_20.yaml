@@ -186,6 +186,7 @@ tasks:
       - type: file_contains
         path: C:/agent-test/messages.log
         text: 你好世界
+        exact_count: 1
     reset:
       - python tasks/reset_desktop.py
       - taskkill /F /IM notepad.exe /T
