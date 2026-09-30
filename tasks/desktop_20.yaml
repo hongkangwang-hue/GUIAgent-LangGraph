@@ -177,6 +177,7 @@ tasks:
       - type: process
         name: notepad.exe
         should_run: false
+    # 进程退出不能清除记事本的会话恢复数据；客机还需关闭旧会话恢复。
     note: >
       文件由 setup_env.py 预置，内容固定。两条判据缺一不可，
       理由见文件头。
