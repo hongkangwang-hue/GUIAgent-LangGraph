@@ -213,7 +213,7 @@ def _merge_search_address_focus(
 
 
 def _merge_message_send(
-    instruction: str, subtasks: list[SubTask]
+    instruction: str, subtasks: list[SubTask], *, explicit_focus: bool = False
 ) -> tuple[list[SubTask], list[dict]]:
     """把消息输入及后续提交合成一个以可见发送结果为终点的目标。
 
@@ -239,7 +239,12 @@ def _merge_message_send(
     start = input_index
     if start > 0 and _MESSAGE_FOCUS.search(subtasks[start - 1].goal):
         start -= 1
-    goal = f"在「{app}」输入「{body}」并发送一次，消息列表出现后结束"
+    if explicit_focus:
+        goal = (
+            f"先点击「{app}」的消息输入框，再输入「{body}」，点击发送按钮一次；消息列表出现后结束"
+        )
+    else:
+        goal = f"在「{app}」输入「{body}」并发送一次，消息列表出现后结束"
     repaired = [
         SubTask(id=index + 1, goal=task.goal, expected=task.expected)
         for index, task in enumerate(subtasks[:start])
@@ -422,6 +427,11 @@ class Planner:
             repairs.extend(new_repairs)
         if "atomic_message_send" in self.template.features:
             subtasks, new_repairs = _merge_message_send(instruction.strip(), subtasks)
+            repairs.extend(new_repairs)
+        if "focused_message_send" in self.template.features:
+            subtasks, new_repairs = _merge_message_send(
+                instruction.strip(), subtasks, explicit_focus=True
+            )
             repairs.extend(new_repairs)
         plan = Plan(
             instruction=instruction.strip(),

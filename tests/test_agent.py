@@ -297,6 +297,24 @@ def test_message_send_is_one_transaction_in_new_template() -> None:
     assert len(baseline.subtasks) == 3
 
 
+def test_message_send_v5_requires_focusing_input_before_typing() -> None:
+    """实机 v4 连续三次 type 却没有帧差；v5 明确要求先点输入框。"""
+    raw = (
+        '{"subtasks":['
+        '{"goal":"点击消息输入框","expected":"光标出现"},'
+        '{"goal":"输入文本「你好世界」","expected":"输入框显示文本"},'
+        '{"goal":"点击发送按钮","expected":"消息出现在列表"}]}'
+    )
+    plan = Planner(_plan_backend(raw), template=load_template("planner_v5")).plan(
+        "在「测试消息」程序里发送一条内容为「你好世界」的消息"
+    )
+    assert plan.goals() == [
+        "先点击「测试消息」的消息输入框，再输入「你好世界」，点击发送按钮一次；消息列表出现后结束"
+    ]
+    assert plan.subtasks[0].expected == "消息列表显示一条「你好世界」"
+    assert plan.repairs[0]["rule"] == "merge_message_send"
+
+
 def test_message_plan_repairs_missing_submit_step() -> None:
     raw = '{"subtasks":[{"goal":"输入文本「你好世界」"}]}'
     plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(
