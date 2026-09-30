@@ -315,6 +315,19 @@ def test_message_send_v5_requires_focusing_input_before_typing() -> None:
     assert plan.repairs[0]["rule"] == "merge_message_send"
 
 
+def test_file_dialog_v6_example_uses_filename_field_once() -> None:
+    """新示例要能解析，且不会误导模型把完整路径重复粘进文件名框。"""
+    import json
+
+    template = load_template("planner_v6")
+    example = template.few_shot[0]
+    goals = [task["goal"] for task in json.loads(example.output)["subtasks"]]
+    assert "文件名框" in goals[2]
+    assert "C:\\agent-test\\说明书.txt" in goals[2]
+    assert "一次" in goals[2]
+    assert "打开对话框消失" in json.loads(example.output)["subtasks"][3]["expected"]
+
+
 def test_message_plan_repairs_missing_submit_step() -> None:
     raw = '{"subtasks":[{"goal":"输入文本「你好世界」"}]}'
     plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(

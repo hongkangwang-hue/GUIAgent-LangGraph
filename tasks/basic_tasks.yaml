@@ -153,6 +153,12 @@ tasks:
           should_run: true
         - type: window_title
           pattern: "测试文档"
+        # 目标标签页可能是记事本启动时自动恢复的。若「打开」对话框仍在，
+        # 本轮并未完成文件打开操作，不能只凭后台标签页标题判成功。
+        - type: window_title
+          pattern: "^打开$"
+          regex: true
+          should_match: false
     reset:
       - python tasks/reset_desktop.py
       - taskkill /F /IM notepad.exe /T

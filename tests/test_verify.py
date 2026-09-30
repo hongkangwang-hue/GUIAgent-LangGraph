@@ -85,6 +85,21 @@ class TestTaskPreconditions:
             check = SuccessCheck.from_spec(task["precondition"])
             assert check.checks
 
+    def test_打开文件时不能留下打开对话框(self):
+        """记事本可能恢复旧标签页；对话框未关闭时不能判本轮已完成。"""
+        for manifest in ("tasks/basic_tasks.yaml", "tasks/desktop_20.yaml"):
+            import yaml
+
+            with open(manifest, encoding="utf-8") as handle:
+                tasks = yaml.safe_load(handle)["tasks"]
+            task = next(item for item in tasks if item["name"] == "open_file")
+            assert {
+                "type": "window_title",
+                "pattern": "^打开$",
+                "regex": True,
+                "should_match": False,
+            } in _flatten(task["success_check"])
+
     def test_进程类判据有反向起点(self):
         """判据说「X 应在运行」，起点必须说「X 不应在运行」。"""
         for task in self._tasks():
