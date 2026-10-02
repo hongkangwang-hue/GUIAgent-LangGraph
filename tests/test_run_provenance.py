@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -74,6 +75,33 @@ class TestArchiveRecordsProvenance:
         payload = self._payload()
         for field in ("backend", "offline", "tag", "partial", "repeats", "scope"):
             assert field in payload
+
+    def test_任务清单及内容指纹进存档(self):
+        import hashlib
+
+        payload = self._payload()
+        path = Path(payload["task_file"])
+        assert path == Path("tasks/basic_tasks.yaml")
+        assert payload["task_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class TestM2RawGuard:
+    def test_第七周任务集不得覆盖基础任务原始数据(self):
+        from scripts.run_basic_tasks import writes_m2_raw
+
+        args = make_args(execute=True, repeats=3, tasks="tasks/desktop_20.yaml")
+        assert not writes_m2_raw(args, offline=False)
+        args.repeats = 5
+        assert not writes_m2_raw(args, offline=False)
+
+    def test_仅完整在线基础任务五次可更新快捷路径(self):
+        from scripts.run_basic_tasks import writes_m2_raw
+
+        args = make_args(execute=True, repeats=5)
+        assert writes_m2_raw(args, offline=False)
+        assert not writes_m2_raw(args, offline=True)
+        args.only = "open_file"
+        assert not writes_m2_raw(args, offline=False)
 
 
 class TestScreenInfo:

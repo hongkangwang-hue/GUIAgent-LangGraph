@@ -112,6 +112,13 @@ class TestEveryTaskIsWellFormed:
         """不封顶的话，一次死循环能把整批评测拖到跑不完。"""
         assert not [t["name"] for t in tasks if not t.get("max_steps")]
 
+    def test_setup_env_clean_命令不带不支持的文件名(self, tasks):
+        """setup_env.py 的 --clean 不接受位置参数；错误会被 reset 静默忽略。"""
+        for task in tasks:
+            for command in task["reset"]:
+                if "tasks/setup_env.py --clean" in command:
+                    assert command == "python tasks/setup_env.py --clean", task["name"]
+
     def test_步数上限随难度递增(self, tasks):
         """复杂任务的预算不该低于单步任务的。"""
         budget = {"单步": [], "多步": [], "复杂": []}

@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -53,6 +54,17 @@ RAW = Path("docs/m2-basic-tasks-raw.json")
 #:
 #: 评测数据是**跑一次就贵一次**的东西，默认行为不该是覆盖。
 RUNS = Path("docs/m2-runs")
+
+
+def writes_m2_raw(args, offline: bool) -> bool:
+    """只有在线基础任务完整 5×5 批次才能更新 M2 快捷路径。"""
+    return (
+        args.execute
+        and not offline
+        and not args.only
+        and args.repeats == 5
+        and Path(args.tasks).resolve() == TASK_FILE.resolve()
+    )
 
 
 @dataclass
@@ -731,6 +743,8 @@ def archive_payload(
             "executed": bool(args.execute),
             "repeats": args.repeats,
             "scope": args.only or "all",
+            "task_file": str(args.tasks),
+            "task_sha256": hashlib.sha256(Path(args.tasks).read_bytes()).hexdigest(),
             # **后端必须进存档。** 在线与离线两份存档除了数字之外长得一模一样，
             # 不记下来，隔几天就分不清哪份是哪份——而这两份正是对比报告的全部依据。
             "backend": backend_label,
@@ -919,7 +933,7 @@ def render(
         aborted=aborted,
         safety_setup=safety_setup,
     )
-    # **只有「在线 + 全量 + 实机」这一种跑法才配写 M2 的交付物。**
+    # **只有「在线 + 基础任务 + 5 次 + 全量 + 实机」才写 M2 快捷路径。**
     #
     # `RAW` 是 M2 验收报告引用的那份数据，说的是在线版 19/24。任何别的跑法
     # 顺手把它写掉，报告里的数字和它引用的文件就对不上——**这不是假想**：
@@ -930,10 +944,9 @@ def render(
     #     两个数字都对，只是不再来自同一个文件。
     #
     # 存档目录里每一次跑都有独立文件，那才是所有跑法的落点。
-    skip_raw = offline or bool(args.only) or not args.execute
+    skip_raw = not writes_m2_raw(args, offline)
     if skip_raw:
-        why = "离线运行" if offline else ("只跑了单个任务" if args.only else "演练模式")
-        print(f"  （{why}，未覆盖 {RAW}——那是在线全量实机跑的 M2 交付数据）")
+        print(f"  （不是在线基础任务完整 5×5 实机批次，未覆盖 {RAW}）")
     else:
         RAW.parent.mkdir(parents=True, exist_ok=True)
         RAW.write_text(payload, encoding="utf-8")
