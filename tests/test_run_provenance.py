@@ -90,18 +90,20 @@ class TestM2RawGuard:
         from scripts.run_basic_tasks import writes_m2_raw
 
         args = make_args(execute=True, repeats=3, tasks="tasks/desktop_20.yaml")
-        assert not writes_m2_raw(args, offline=False)
+        assert not writes_m2_raw(args, offline=False, record_count=60)
         args.repeats = 5
-        assert not writes_m2_raw(args, offline=False)
+        assert not writes_m2_raw(args, offline=False, record_count=100)
 
     def test_仅完整在线基础任务五次可更新快捷路径(self):
         from scripts.run_basic_tasks import writes_m2_raw
 
         args = make_args(execute=True, repeats=5)
-        assert writes_m2_raw(args, offline=False)
-        assert not writes_m2_raw(args, offline=True)
+        assert writes_m2_raw(args, offline=False, record_count=25)
+        assert not writes_m2_raw(args, offline=True, record_count=25)
+        assert not writes_m2_raw(args, offline=False, record_count=8, aborted=True)
+        assert not writes_m2_raw(args, offline=False, record_count=24)
         args.only = "open_file"
-        assert not writes_m2_raw(args, offline=False)
+        assert not writes_m2_raw(args, offline=False, record_count=5)
 
 
 class TestScreenInfo:

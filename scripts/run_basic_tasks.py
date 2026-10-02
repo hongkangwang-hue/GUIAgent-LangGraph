@@ -56,13 +56,15 @@ RAW = Path("docs/m2-basic-tasks-raw.json")
 RUNS = Path("docs/m2-runs")
 
 
-def writes_m2_raw(args, offline: bool) -> bool:
-    """只有在线基础任务完整 5×5 批次才能更新 M2 快捷路径。"""
+def writes_m2_raw(args, offline: bool, record_count: int, aborted: bool = False) -> bool:
+    """只有未中止的在线基础任务完整 5×5 批次才能更新 M2 快捷路径。"""
     return (
         args.execute
         and not offline
+        and not aborted
         and not args.only
         and args.repeats == 5
+        and record_count == 25
         and Path(args.tasks).resolve() == TASK_FILE.resolve()
     )
 
@@ -426,10 +428,20 @@ def main() -> int:
     offline = is_offline(backend)
 
     print("=" * 74)
-    print("M2 基础任务批量执行")
+    print(
+        "M2 基础任务批量执行"
+        if Path(args.tasks).resolve() == TASK_FILE.resolve()
+        else "桌面任务批量执行"
+    )
     print("=" * 74)
     print(
         f"  任务数    {len(tasks)}    每个跑 {args.repeats} 次    共 {len(tasks) * args.repeats} 轮"
+    )
+    print(f"  任务清单  {args.tasks}")
+    print(f"  引擎      {args.engine}")
+    print(
+        f"  提示词    {args.planner_template or SessionConfig.planner_template}"
+        f" + {args.executor_template or SessionConfig.executor_template}"
     )
     print(f"  后端      {describe(backend)}")
     print(f"  数据边界  {'截图不出本机' if offline else '截图上传到平台服务器'}")
@@ -944,7 +956,7 @@ def render(
     #     两个数字都对，只是不再来自同一个文件。
     #
     # 存档目录里每一次跑都有独立文件，那才是所有跑法的落点。
-    skip_raw = not writes_m2_raw(args, offline)
+    skip_raw = not writes_m2_raw(args, offline, len(records), bool(aborted))
     if skip_raw:
         print(f"  （不是在线基础任务完整 5×5 实机批次，未覆盖 {RAW}）")
     else:
