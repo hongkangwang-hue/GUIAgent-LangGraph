@@ -560,6 +560,7 @@ def main() -> int:
                         reflector=args.reflector,
                         adaptive_settle=args.adaptive_settle,
                         engine=args.engine,
+                        max_unchanged_click_repeats=(4 if task["name"] == "open_file" else 0),
                     ),
                     executor_template=args.executor_template,
                     planner_template=args.planner_template,

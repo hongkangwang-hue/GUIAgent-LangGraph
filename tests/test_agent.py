@@ -338,6 +338,27 @@ def test_file_dialog_v7_example_uses_ctrl_o_and_select_all() -> None:
     assert "C:\\agent-test\\说明书.txt" in subtasks[2]["goal"]
 
 
+def test_file_dialog_v8_example_types_into_focused_field() -> None:
+    import json
+
+    subtasks = json.loads(load_template("planner_v8").few_shot[0].output)["subtasks"]
+    goal = subtasks[2]["goal"]
+    assert "直接输入" in goal
+    assert "点击" not in goal
+    assert "C:\\agent-test\\说明书.txt" in goal
+
+
+def test_executor_v5_file_dialog_example_uses_type() -> None:
+    from llm.parsing import parse_action_payload
+
+    example = next(
+        item for item in load_template("executor_v5").few_shot if "文件名框" in item.note
+    )
+    payload = parse_action_payload(example.output)
+    assert payload["action_type"] == "type"
+    assert payload["params"]["text"] == r"C:\agent-test\说明书.txt"
+
+
 def test_message_plan_repairs_missing_submit_step() -> None:
     raw = '{"subtasks":[{"goal":"输入文本「你好世界」"}]}'
     plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(

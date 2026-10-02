@@ -140,6 +140,7 @@ class SessionConfig:
             "reflector_max_rejects": self.loop.reflector_max_rejects,
             "coordinate_space": list(self.coordinate_space),
             "max_iterations": self.loop.max_iterations,
+            "max_unchanged_click_repeats": self.loop.max_unchanged_click_repeats,
             "cost_limit_cny": self.loop.cost_limit_cny,
             "settle_seconds": self.loop.settle_seconds,
             "dry_run": None,  # 由 Session 填，执行器才知道

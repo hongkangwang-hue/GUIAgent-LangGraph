@@ -100,7 +100,12 @@ def _own_console_handle() -> int:
         return 0
 
 
-def check_window_title(pattern: str, regex: bool = False, should_match: bool = True) -> CheckResult:
+def check_window_title(
+    pattern: str,
+    regex: bool = False,
+    should_match: bool = True,
+    include_foreground: bool = False,
+) -> CheckResult:
     """存在（或不存在）标题匹配的窗口。
 
     ``should_match=False`` 是给**起点检查**用的。另外三个判据早就有反方向
@@ -151,6 +156,15 @@ def check_window_title(pattern: str, regex: bool = False, should_match: bool = T
             window = window.GetNextSiblingControl()
     except Exception as exc:  # noqa: BLE001
         return CheckResult(False, f"枚举窗口失败：{exc}", "window_title")
+
+    if include_foreground:
+        # Windows 11 的文件打开对话框可能是应用窗口的 owned modal，
+        # UIA 根节点的直接子窗口枚举会漏掉；Win32 前台窗口可补上这一项。
+        from control.sentinel import foreground_window
+
+        foreground = foreground_window()
+        if foreground and foreground.title.strip():
+            titles.append(foreground.title.strip())
 
     if regex:
         matcher = re.compile(pattern, re.IGNORECASE)

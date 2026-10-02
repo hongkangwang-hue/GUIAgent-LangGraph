@@ -98,7 +98,34 @@ class TestTaskPreconditions:
                 "pattern": "^打开$",
                 "regex": True,
                 "should_match": False,
+                "include_foreground": True,
             } in _flatten(task["success_check"])
+
+
+def test_file_dialog_foreground_is_checked_when_uia_root_misses_it(monkeypatch):
+    """打开对话框作为 owned modal 时，根节点枚举可能漏掉它。"""
+    import sys
+    from types import SimpleNamespace
+
+    from control.sentinel import WindowInfo
+    from core import verify
+
+    monkeypatch.setattr(verify, "IS_WINDOWS", True)
+    monkeypatch.setattr(verify, "_own_console_handle", lambda: 0)
+    monkeypatch.setitem(
+        sys.modules,
+        "uiautomation",
+        SimpleNamespace(GetRootControl=lambda: SimpleNamespace(GetFirstChildControl=lambda: None)),
+    )
+    monkeypatch.setattr(
+        "control.sentinel.foreground_window", lambda: WindowInfo("打开", "notepad.exe")
+    )
+
+    kwargs = {"pattern": "^打开$", "regex": True, "should_match": False}
+    assert verify.check_window_title(**kwargs).passed
+    result = verify.check_window_title(**kwargs, include_foreground=True)
+    assert not result.passed
+    assert "打开" in result.detail
 
     def test_打开文件标题必须精确匹配(self):
         """误建的 Cagent-test测试文档.txt 标签不能再算成功。"""

@@ -145,6 +145,30 @@ def test_context_mismatch_feedback_matches_between_engines(tmp_path):
     assert "Ctrl+O" in runs["legacy"]["instructions"][1]
 
 
+def test_repeated_unchanged_click_feedback_and_stop_match_between_engines(tmp_path):
+    """文件名框聚焦不产生帧差时，两种循环应提示输入并及时停止空转。"""
+    import importlib.util
+
+    script = [{"action": "left_click", "x": 100, "y": 200}] * 5
+    engines = ENGINES if importlib.util.find_spec("langgraph") else ("legacy",)
+    runs = {
+        engine: _run(
+            engine,
+            script,
+            tmp_path,
+            {**BASE, "max_unchanged_click_repeats": 4},
+        )
+        for engine in engines
+    }
+    if "langgraph" in runs:
+        assert runs["legacy"]["steps"] == runs["langgraph"]["steps"]
+    legacy = runs["legacy"]
+    assert legacy["result"]["status"] == STOP_ACTION_FAILED
+    assert len(legacy["steps"]) == 4
+    assert legacy["steps"][3]["meta"]["unchanged_click_repeat"] == 4
+    assert "下一步请使用 type" in legacy["instructions"][2]
+
+
 def test_graph_observe_retries_context_mismatch_without_langgraph_dependency():
     """此节点可独立验证：错误焦点拒绝输入后继续循环并提示模型。"""
     from control.actions import Action, ActionType
@@ -177,6 +201,42 @@ def test_graph_observe_retries_context_mismatch_without_langgraph_dependency():
     assert result["stop"] is None
     assert result["after"] is None
     assert loop._reflector_hint == "先打开文件对话框"
+
+
+def test_graph_observe_stops_repeated_unchanged_click_without_langgraph_dependency():
+    from control.actions import Action, ActionType
+    from control.executor import ActionResult
+    from core.trajectory import LatencyBreakdown, StepRecord
+
+    scaler = CoordinateScaler(SCREEN)
+    scaler.register("planner", MODEL_W, MODEL_H)
+    capturer = FakeCapturer()
+    loop = GraphAgentLoop(
+        llm=ScriptedBackend([]),
+        grounding=NativeGrounding(MODEL_W, MODEL_H),
+        executor=ActionExecutor(scaler, dry_run=True),
+        capturer=capturer,
+        config=LoopConfig(engine="langgraph", save_frames=False, max_unchanged_click_repeats=4),
+    )
+    action = Action(ActionType.LEFT_CLICK, x=100, y=200)
+    for step in range(1, 5):
+        record = StepRecord(step=step, subtask="点击文件名框")
+        result = loop._node_observe(
+            {
+                "record": record,
+                "latency": LatencyBreakdown(),
+                "action": action,
+                "outcome": ActionResult(action, True),
+                "before": capturer.capture(),
+                "step_index": step,
+            }
+        )
+        assert record.meta["unchanged_click_repeat"] == step
+        if step < 4:
+            assert result["stop"] is None
+        else:
+            assert result["stop"][0] == STOP_ACTION_FAILED
+    assert "下一步请使用 type" in loop._reflector_hint
 
 
 def test_graph_done_guard_rejects_premature_done_without_langgraph_dependency():

@@ -139,6 +139,8 @@ class GraphAgentLoop(AgentLoop):
         self.retry_policy.reset()
         self.reflector.reset()
         self._reflector_hint = ""
+        self._last_unchanged_click = None
+        self._unchanged_click_count = 0
         logger.info("子任务 #%d 开始：%s", subtask_id, subtask)
 
         with _tracing_disabled():
@@ -449,8 +451,14 @@ class GraphAgentLoop(AgentLoop):
             if self.config.reflector:
                 self.reflector.observe(changed=changed)
 
+        stalled = self._observe_unchanged_click(
+            action, report.changed if after is not None else None, record
+        )
+
         if outcome.error_type == "emergency_stopped":
             stop = (STOP_EMERGENCY, outcome.error)
+        elif stalled:
+            stop = (STOP_ACTION_FAILED, stalled)
         elif outcome.error_type == "context_mismatch":
             self._reflector_hint = outcome.error
             stop = None

@@ -160,6 +160,7 @@ tasks:
           pattern: "^打开$"
           regex: true
           should_match: false
+          include_foreground: true
     reset:
       - python tasks/reset_desktop.py
       - taskkill /F /IM notepad.exe /T

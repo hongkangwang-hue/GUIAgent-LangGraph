@@ -124,6 +124,10 @@ class LoopConfig:
     #: 收益用 A/B 对照给出（大纲第 6 周任务 3）。
     adaptive_settle: bool = False
 
+    #: 同一坐标点击且无画面变化时的上限。0 表示关闭，保持历史基线行为。
+    #: 文件对话框输入任务启用它，避免模型连续点击输入框直至步数耗尽。
+    max_unchanged_click_repeats: int = 0
+
     #: 自适应等待的上限。界面有动画时会等满这么久——**这不是保险，是必须**，
     #: 视频与 loading 动画在持续改变像素，永远等不到「不再变化」。
     settle_max_wait: float = 2.0
@@ -142,6 +146,8 @@ class LoopConfig:
             raise ValueError("history_k 不能为负")
         if self.engine not in ENGINES:
             raise ValueError(f"engine 必须是 {'/'.join(ENGINES)} 之一，收到 {self.engine!r}")
+        if self.max_unchanged_click_repeats < 0:
+            raise ValueError("max_unchanged_click_repeats 不能为负")
 
 
 #: 循环的结束原因。
@@ -247,6 +253,8 @@ class AgentLoop:
         self.reflector = Reflector(max_rejects=self.config.reflector_max_rejects)
         #: Reflector 否决后要回传给模型的话。只带一轮，用完即清。
         self._reflector_hint = ""
+        self._last_unchanged_click: tuple[str, int | None, int | None] | None = None
+        self._unchanged_click_count = 0
         # 由上层按任务注入的可选终态检查。返回原因表示拒绝本次 done。
         self.done_guard: Callable[[], str] | None = None
 
@@ -266,6 +274,8 @@ class AgentLoop:
         self.retry_policy.reset()
         self.reflector.reset()
         self._reflector_hint = ""
+        self._last_unchanged_click = None
+        self._unchanged_click_count = 0
         logger.info("子任务 #%d 开始：%s", subtask_id, subtask)
 
         for iteration in range(1, self.config.max_iterations + 1):
@@ -498,12 +508,18 @@ class AgentLoop:
             if self.config.reflector:
                 self.reflector.observe(changed=changed)
 
+        stalled = self._observe_unchanged_click(
+            action, report.changed if after is not None else None, record
+        )
+
         record.latency = latency.as_dict()
         self._push_history(action, intent.thinking, after or before, outcome)
         self._commit(record)
 
         if outcome.error_type == "emergency_stopped":
             return record, (STOP_EMERGENCY, outcome.error)
+        if stalled:
+            return record, (STOP_ACTION_FAILED, stalled)
         if outcome.error_type == "context_mismatch":
             # 没有发出键盘事件；把实际窗口状态反馈给模型，允许它先打开对话框。
             self._reflector_hint = outcome.error
@@ -522,6 +538,30 @@ class AgentLoop:
             reason = f"最终状态检查失败：{exc}"
         record.meta["done_guard"] = {"accepted": not bool(reason), "reason": reason}
         return reason
+
+    def _observe_unchanged_click(self, action, changed: bool | None, record: StepRecord) -> str:
+        """对连续无变化点击给反馈，并在上限处停止空转。"""
+        limit = self.config.max_unchanged_click_repeats
+        if not limit:
+            return ""
+        if action.type.value not in ("left_click", "double_click") or changed is not False:
+            self._last_unchanged_click = None
+            self._unchanged_click_count = 0
+            return ""
+        signature = (action.type.value, action.x, action.y)
+        self._unchanged_click_count = (
+            self._unchanged_click_count + 1 if signature == self._last_unchanged_click else 1
+        )
+        self._last_unchanged_click = signature
+        record.meta["unchanged_click_repeat"] = self._unchanged_click_count
+        if self._unchanged_click_count >= 2:
+            self._reflector_hint = (
+                "已经连续点击同一位置，但截图没有变化。若目标是输入框，聚焦可能本来就不会"
+                "产生明显画面变化；下一步请使用 type 输入目标文字，不要再次点击同一点。"
+            )
+        if self._unchanged_click_count >= limit:
+            return f"同一位置点击 {self._unchanged_click_count} 次且屏幕无变化，已停止重复操作"
+        return ""
 
     # ------------------------------------------------------------------ #
     # 各步的细节
