@@ -337,6 +337,11 @@ class GraphAgentLoop(AgentLoop):
         record, intent, step_index = state["record"], state["intent"], state["step_index"]
 
         record.execution_status = "no_action"
+        reason = self._done_guard_reason(record)
+        if reason:
+            self._reflector_hint = reason
+            logger.info("步骤 %d：终态检查否决 done：%s", step_index, reason)
+            return {"stop": None}
         if self.config.reflector:
             verdict = self.reflector.judge()
             record.meta["reflector"] = verdict.as_dict()
@@ -446,6 +451,9 @@ class GraphAgentLoop(AgentLoop):
 
         if outcome.error_type == "emergency_stopped":
             stop = (STOP_EMERGENCY, outcome.error)
+        elif outcome.error_type == "context_mismatch":
+            self._reflector_hint = outcome.error
+            stop = None
         elif not outcome.success:
             stop = (STOP_ACTION_FAILED, outcome.error)
         else:

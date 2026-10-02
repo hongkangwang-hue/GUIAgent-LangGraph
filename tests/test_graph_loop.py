@@ -109,6 +109,99 @@ def _change_resolution(loop) -> None:
     loop.executor.scaler = other
 
 
+def test_context_mismatch_feedback_matches_between_engines(tmp_path):
+    """拦下错误焦点的路径后，两种循环都要反馈模型并继续。"""
+    import importlib.util
+
+    attempts = {"legacy": 0, "langgraph": 0}
+
+    def setup(engine):
+        def configure(loop):
+            def guard(text):
+                if not text.startswith("C:"):
+                    return ""
+                attempts[engine] += 1
+                return "请先按 Ctrl+O 打开文件对话框" if attempts[engine] == 1 else ""
+
+            loop.executor.type_context_guard = guard
+
+        return configure
+
+    script = [
+        {"action": "type", "text": r"C:\agent-test\测试文档.txt"},
+        {"action": "key", "keys": "ctrl+o"},
+        {"action": "type", "text": r"C:\agent-test\测试文档.txt"},
+        {"done": True},
+    ]
+    engines = ENGINES if importlib.util.find_spec("langgraph") else ("legacy",)
+    runs = {
+        engine: _run(engine, script, tmp_path, {**BASE, "max_iterations": 5}, setup=setup(engine))
+        for engine in engines
+    }
+    if "langgraph" in runs:
+        assert runs["legacy"]["steps"] == runs["langgraph"]["steps"]
+    assert runs["legacy"]["result"]["status"] == STOP_DONE
+    assert runs["legacy"]["steps"][0]["error_type"] == "context_mismatch"
+    assert "Ctrl+O" in runs["legacy"]["instructions"][1]
+
+
+def test_graph_observe_retries_context_mismatch_without_langgraph_dependency():
+    """此节点可独立验证：错误焦点拒绝输入后继续循环并提示模型。"""
+    from control.actions import Action, ActionType
+    from control.executor import ActionResult
+    from core.trajectory import LatencyBreakdown, StepRecord
+
+    scaler = CoordinateScaler(SCREEN)
+    scaler.register("planner", MODEL_W, MODEL_H)
+    capturer = FakeCapturer()
+    loop = GraphAgentLoop(
+        llm=ScriptedBackend([]),
+        grounding=NativeGrounding(MODEL_W, MODEL_H),
+        executor=ActionExecutor(scaler, dry_run=True),
+        capturer=capturer,
+        config=LoopConfig(engine="langgraph", save_frames=False),
+    )
+    action = Action(ActionType.TYPE, text=r"C:\agent-test\测试文档.txt")
+    result = loop._node_observe(
+        {
+            "record": StepRecord(step=1, subtask="输入路径"),
+            "latency": LatencyBreakdown(),
+            "action": action,
+            "outcome": ActionResult(
+                action, False, error="先打开文件对话框", error_type="context_mismatch"
+            ),
+            "before": capturer.capture(),
+            "step_index": 1,
+        }
+    )
+    assert result["stop"] is None
+    assert result["after"] is None
+    assert loop._reflector_hint == "先打开文件对话框"
+
+
+def test_graph_done_guard_rejects_premature_done_without_langgraph_dependency():
+    from core.trajectory import StepRecord
+    from llm.base import ActionIntent
+
+    scaler = CoordinateScaler(SCREEN)
+    scaler.register("planner", MODEL_W, MODEL_H)
+    loop = GraphAgentLoop(
+        llm=ScriptedBackend([]),
+        grounding=NativeGrounding(MODEL_W, MODEL_H),
+        executor=ActionExecutor(scaler, dry_run=True),
+        capturer=FakeCapturer(),
+        config=LoopConfig(engine="langgraph", save_frames=False),
+    )
+    loop.done_guard = lambda: "目标文件未打开"
+    record = StepRecord(step=1, subtask="打开文件")
+    outcome = loop._node_judge_done(
+        {"record": record, "intent": ActionIntent(done=True), "step_index": 1}
+    )
+    assert outcome["stop"] is None
+    assert loop._reflector_hint == "目标文件未打开"
+    assert record.meta["done_guard"]["accepted"] is False
+
+
 CLICK = {"action": "left_click", "x": 100, "y": 200, "thinking": "点开始菜单"}
 BASE = {"max_iterations": 5, "save_frames": False}
 

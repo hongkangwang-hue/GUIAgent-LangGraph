@@ -247,6 +247,8 @@ class AgentLoop:
         self.reflector = Reflector(max_rejects=self.config.reflector_max_rejects)
         #: Reflector 否决后要回传给模型的话。只带一轮，用完即清。
         self._reflector_hint = ""
+        # 由上层按任务注入的可选终态检查。返回原因表示拒绝本次 done。
+        self.done_guard: Callable[[], str] | None = None
 
         #: 每步落盘后触发，CLI 用它刷新实时面板。
         #: 回调抛异常不影响任务——显示层的问题不该把正在执行的任务带崩
@@ -384,6 +386,11 @@ class AgentLoop:
         # **不打开 Reflector 时，这里与 M2/M3 实测时一字不差。**
         if intent.done:
             record.execution_status = "no_action"
+            reason = self._done_guard_reason(record)
+            if reason:
+                self._reflector_hint = reason
+                record.latency = latency.as_dict()
+                return self._commit(record), None
             if self.config.reflector:
                 verdict = self.reflector.judge()
                 record.meta["reflector"] = verdict.as_dict()
@@ -497,9 +504,24 @@ class AgentLoop:
 
         if outcome.error_type == "emergency_stopped":
             return record, (STOP_EMERGENCY, outcome.error)
+        if outcome.error_type == "context_mismatch":
+            # 没有发出键盘事件；把实际窗口状态反馈给模型，允许它先打开对话框。
+            self._reflector_hint = outcome.error
+            return record, None
         if not outcome.success:
             return record, (STOP_ACTION_FAILED, outcome.error)
         return record, None
+
+    def _done_guard_reason(self, record: StepRecord) -> str:
+        """最终状态未达成时拒绝模型的 done，并把依据写进轨迹。"""
+        if self.done_guard is None:
+            return ""
+        try:
+            reason = self.done_guard()
+        except Exception as exc:  # noqa: BLE001 —— 检查失败不能等同任务完成
+            reason = f"最终状态检查失败：{exc}"
+        record.meta["done_guard"] = {"accepted": not bool(reason), "reason": reason}
+        return reason
 
     # ------------------------------------------------------------------ #
     # 各步的细节

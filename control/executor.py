@@ -25,6 +25,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from control.actions import Action, ActionType
@@ -125,6 +126,9 @@ class ActionExecutor:
         # 旧实现 50ms 后就恢复原文，可能使 VMware 客机把原先复制的命令粘进搜索框。
         self._clipboard_original: str | None = None
         self._clipboard_last: str | None = None
+        # 可选的任务上下文检查：返回空串表示允许输入，否则给模型可读的原因。
+        # 基础任务的文件路径只允许粘贴到「打开」对话框，避免写进记事本正文。
+        self.type_context_guard: Callable[[str], str] | None = None
 
     # ------------------------------------------------------------------ #
     # 生命周期
@@ -247,6 +251,19 @@ class ActionExecutor:
             real_point_to=real_point_to,
             verdict=verdict,
         )
+
+        if action.type is ActionType.TYPE and self.type_context_guard is not None:
+            try:
+                reason = self.type_context_guard(action.text)
+            except Exception as exc:  # noqa: BLE001 —— 检查失败时不允许继续粘贴
+                result.error, result.error_type = (
+                    f"输入前窗口检查失败：{exc}",
+                    "context_check_failed",
+                )
+                return self._finish(result, start)
+            if reason:
+                result.error, result.error_type = reason, "context_mismatch"
+                return self._finish(result, start)
 
         # --- 分派 ---
         try:

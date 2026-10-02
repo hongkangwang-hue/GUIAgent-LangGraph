@@ -128,6 +128,24 @@ def first_step_outcome(steps: list) -> tuple[bool | None, str]:
     return False, f"第一步执行了但屏幕没有变化（ratio={change.get('ratio')}）"
 
 
+def require_open_file_dialog_for_path(text: str) -> str:
+    """打开文件任务输入绝对路径前，确认键盘焦点在文件对话框。"""
+    if len(text) < 3 or not text[0].isalpha() or text[1] != ":" or text[2] not in "\\/":
+        return ""
+    from control.sentinel import foreground_window
+
+    window = foreground_window()
+    title = window.title.strip() if window else "（未取得前台窗口）"
+    process = window.process.lower() if window else ""
+    if title in ("打开", "Open") and process == "notepad.exe":
+        return ""
+    return (
+        f"当前前台窗口为 {title!r}（{process or '未知进程'}），不是记事本的文件打开对话框。"
+        "路径尚未输入；请先在记事本按 Ctrl+O，确认「打开」对话框出现，"
+        "再点击文件名框输入路径。"
+    )
+
+
 def round_safety_events(results: list) -> list[dict]:
     """从本轮的动作执行结果里挑出安全事件：哨兵命中与危险输入拦截。"""
     events = []
@@ -480,6 +498,11 @@ def main() -> int:
     for task in tasks:
         if abort_reason:
             break
+        executor.type_context_guard = (
+            require_open_file_dialog_for_path
+            if args.execute and task["name"] == "open_file"
+            else None
+        )
         check = SuccessCheck.from_spec(task.get("success_check"))
         pre = SuccessCheck.from_spec(task.get("precondition")) if task.get("precondition") else None
         max_steps = args.max_steps or task.get("max_steps", 12)
@@ -540,6 +563,11 @@ def main() -> int:
                     ),
                     executor_template=args.executor_template,
                     planner_template=args.planner_template,
+                    final_success_check=(
+                        task.get("success_check")
+                        if args.execute and task["name"] == "open_file"
+                        else None
+                    ),
                     allowed_actions=allowed,
                 ),
             )

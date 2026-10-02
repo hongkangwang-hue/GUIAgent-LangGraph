@@ -328,6 +328,16 @@ def test_file_dialog_v6_example_uses_filename_field_once() -> None:
     assert "打开对话框消失" in json.loads(example.output)["subtasks"][3]["expected"]
 
 
+def test_file_dialog_v7_example_uses_ctrl_o_and_select_all() -> None:
+    import json
+
+    template = load_template("planner_v7")
+    subtasks = json.loads(template.few_shot[0].output)["subtasks"]
+    assert "Ctrl+O" in subtasks[1]["goal"]
+    assert "Ctrl+A" in subtasks[2]["goal"]
+    assert "C:\\agent-test\\说明书.txt" in subtasks[2]["goal"]
+
+
 def test_message_plan_repairs_missing_submit_step() -> None:
     raw = '{"subtasks":[{"goal":"输入文本「你好世界」"}]}'
     plan = Planner(_plan_backend(raw), template=load_template("planner_v4")).plan(

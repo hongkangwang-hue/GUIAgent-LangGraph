@@ -162,7 +162,8 @@ tasks:
           name: notepad.exe
           should_run: true
         - type: window_title
-          pattern: "测试文档"
+          pattern: '^\*?测试文档\.txt - (Notepad|记事本)$'
+          regex: true
         - type: window_title
           pattern: "^打开$"
           regex: true

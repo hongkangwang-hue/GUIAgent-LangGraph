@@ -81,6 +81,37 @@ def test_type_rejects_clipboard_changed_by_another_program(
     assert pasted == []
 
 
+def test_type_context_guard_blocks_path_without_pasting(
+    executor: ActionExecutor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """对话框没出现时，路径不能写进记事本正文。"""
+    from scripts.run_basic_tasks import require_open_file_dialog_for_path
+
+    monkeypatch.setattr(
+        "control.sentinel.foreground_window",
+        lambda: SimpleNamespace(title="无标题 - Notepad", process="notepad.exe"),
+    )
+    executor.type_context_guard = require_open_file_dialog_for_path
+    result = executor.execute(Action(ActionType.TYPE, text=r"C:\agent-test\测试文档.txt"))
+    assert not result.success
+    assert result.error_type == "context_mismatch"
+    assert "Ctrl+O" in result.error
+    assert executor._clipboard_last is None
+
+    monkeypatch.setattr(
+        "control.sentinel.foreground_window",
+        lambda: SimpleNamespace(title="打开", process="other.exe"),
+    )
+    assert not executor.execute(Action(ActionType.TYPE, text=r"C:\agent-test\测试文档.txt")).success
+
+    monkeypatch.setattr(
+        "control.sentinel.foreground_window",
+        lambda: SimpleNamespace(title="打开", process="notepad.exe"),
+    )
+    assert executor.execute(Action(ActionType.TYPE, text=r"C:\agent-test\测试文档.txt")).success
+    assert executor.execute(Action(ActionType.TYPE, text="记事本")).success
+
+
 # --------------------------------------------------------------------- #
 # 坐标转换的可追溯性 —— M1 验收标准
 # --------------------------------------------------------------------- #

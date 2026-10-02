@@ -39,6 +39,7 @@ from agent.prompts import PromptTemplate, load_template
 from core.graph_loop import build_agent_loop
 from core.loop import STOP_DONE, LoopConfig, LoopResult
 from core.trajectory import DEFAULT_ROOT, TrajectoryWriter
+from core.verify import SuccessCheck
 from llm.base import CostInfo, LLMBackend
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,8 @@ class SessionConfig:
     #: 提示词模板名。M3 消融换版本就是改这两个
     planner_template: str = "planner_v1"
     executor_template: str = "executor_v1"
+    #: 仅在最后一个子任务报告 done 时检查终态；未达成则把原因反馈给模型继续执行。
+    final_success_check: dict | list | None = None
 
     #: **这个模型真的会哪些动作。** 空表示不限制（全部 CORE_ACTIONS）。
     #:
@@ -121,6 +124,7 @@ class SessionConfig:
         return {
             "planner_template": self.planner_template,
             "executor_template": self.executor_template,
+            "final_success_check": self.final_success_check,
             "plan_with_screenshot": self.plan_with_screenshot,
             "space_name": self.space_name,
             "image_size": list(self.image_size),
@@ -412,7 +416,21 @@ class Session:
         )
         loop.history = self.conversation.steps  # 共用同一份，便于按子任务清空
 
+        final_check = (
+            SuccessCheck.from_spec(self.config.final_success_check)
+            if self.config.final_success_check is not None
+            else None
+        )
+
+        def check_final_state() -> str:
+            assert final_check is not None
+            passed, detail = final_check.run()
+            return "" if passed else f"任务终态尚未满足：{detail}"
+
         for subtask in plan.subtasks:
+            loop.done_guard = (
+                check_final_state if final_check and subtask is plan.subtasks[-1] else None
+            )
             if self.config.clear_history_between_subtasks:
                 self.conversation.clear()
 

@@ -99,6 +99,31 @@ def test_full_chain(tmp_path) -> None:
     assert result.total_steps == 4
 
 
+def test_final_success_check_rejects_premature_done(tmp_path) -> None:
+    """最后一步自报 done 时，终态不成立就反馈模型并继续。"""
+    target = tmp_path / "尚未打开的文件"
+    config = SessionConfig(
+        loop=LoopConfig(max_iterations=3, save_frames=False),
+        final_success_check={"type": "file_exists", "path": str(target)},
+    )
+    script = [
+        {"raw_text": '{"subtasks":[{"goal":"打开文件","expected":"目标文件出现"}]}'},
+        {"done": True},
+        {"done": True},
+        {"done": True},
+    ]
+    session, backend = build(script, tmp_path, config=config)
+    result = session.run("打开文件")
+    assert result.status == "subtask_failed"
+    assert "任务终态尚未满足" in backend.calls[2]["instruction"]
+    steps = list(TrajectoryReader(result.trajectory_dir).steps())
+    assert all(step.meta["done_guard"]["accepted"] is False for step in steps)
+
+    target.touch()
+    session, _ = build(script[:2], tmp_path / "passing", config=config)
+    assert session.run("打开文件").status == "completed"
+
+
 def test_subtasks_enter_the_loop_one_at_a_time(tmp_path) -> None:
     """一次只带一个子目标进 Loop——开源模型能跑起来的前提。"""
     session, backend = build(two_subtask_script(), tmp_path)

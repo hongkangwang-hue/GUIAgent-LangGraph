@@ -100,6 +100,26 @@ class TestTaskPreconditions:
                 "should_match": False,
             } in _flatten(task["success_check"])
 
+    def test_打开文件标题必须精确匹配(self):
+        """误建的 Cagent-test测试文档.txt 标签不能再算成功。"""
+        import re
+
+        import yaml
+
+        for manifest in ("tasks/basic_tasks.yaml", "tasks/desktop_20.yaml"):
+            with open(manifest, encoding="utf-8") as handle:
+                tasks = yaml.safe_load(handle)["tasks"]
+            task = next(item for item in tasks if item["name"] == "open_file")
+            title_check = next(
+                check
+                for check in _flatten(task["success_check"])
+                if check.get("type") == "window_title" and check.get("should_match", True)
+            )
+            pattern = title_check["pattern"]
+            assert title_check["regex"] is True
+            assert re.search(pattern, "测试文档.txt - Notepad")
+            assert not re.search(pattern, "*Cagent-test测试文档.txt - Notepad")
+
     def test_进程类判据有反向起点(self):
         """判据说「X 应在运行」，起点必须说「X 不应在运行」。"""
         for task in self._tasks():
