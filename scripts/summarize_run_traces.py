@@ -84,6 +84,8 @@ def summarize(archive: Path, trajectories: Path) -> dict:
         item = {
             "task": record.get("task"),
             "precondition_ok": record.get("precondition_ok"),
+            "unchanged_click_limit": record.get("unchanged_click_limit"),
+            "final_check_enabled": record.get("final_check_enabled"),
             "loop_status": record.get("loop_status"),
             "model_said_done": record.get("model_said_done"),
             "trajectory_id": record.get("trajectory_id"),
@@ -102,7 +104,11 @@ def summarize(archive: Path, trajectories: Path) -> dict:
             else:
                 item["trace_missing"] = True
         failures.append(item)
-    return {"archive": archive.name, "failures": failures}
+    return {
+        "archive": archive.name,
+        "git_commit": run.get("git_commit"),
+        "failures": failures,
+    }
 
 
 def main() -> int:

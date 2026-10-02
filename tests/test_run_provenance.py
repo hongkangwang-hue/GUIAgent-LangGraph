@@ -66,6 +66,11 @@ class TestArchiveRecordsProvenance:
         assert tuple(action.choices) == ENGINES
         assert action.default == "legacy"
 
+    def test_记录实际代码提交(self):
+        from scripts.run_basic_tasks import git_commit
+
+        assert self._payload()["git_commit"] == git_commit()
+
     def test_记下屏幕设置(self):
         screen = self._payload()["screen"]
         assert "resolution" in screen or screen == {}, "取不到就该是空，不能猜一个"

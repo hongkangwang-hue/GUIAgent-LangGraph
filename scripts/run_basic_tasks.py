@@ -45,6 +45,23 @@ TASK_FILE = Path("tasks/basic_tasks.yaml")
 W7_TASK_FILE = Path("tasks/desktop_20.yaml")
 REPORT = Path("docs/m2-basic-tasks-report.md")
 
+
+def git_commit() -> str:
+    """记录实际运行的代码版本；无 Git 元数据时留空。"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).resolve().parent.parent,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 #: 「最近一次」的固定路径，方便脚本引用。
 RAW = Path("docs/m2-basic-tasks-raw.json")
 #: **每次跑都另存一份带时间戳的。**
@@ -449,6 +466,7 @@ def main() -> int:
         f"  任务数    {len(tasks)}    每个跑 {args.repeats} 次    共 {len(tasks) * args.repeats} 轮"
     )
     print(f"  任务清单  {args.tasks}")
+    print(f"  代码版本  {git_commit()[:12] or '未知'}")
     print(f"  引擎      {args.engine}")
     print(
         f"  提示词    {args.planner_template or SessionConfig.planner_template}"
@@ -457,6 +475,11 @@ def main() -> int:
     print(f"  后端      {describe(backend)}")
     print(f"  数据边界  {'截图不出本机' if offline else '截图上传到平台服务器'}")
     print(f"  模式      {'**实机执行**（会真的操作键鼠）' if args.execute else '演练（不碰键鼠）'}")
+    if Path(args.tasks).resolve() == W7_TASK_FILE.resolve():
+        click_limit, final_check = task_runtime_guards(args.tasks, "", args.execute)
+        print(
+            f"  第7周保护 连续无变化点击上限 {click_limit}；终态检查 {'开' if final_check else '关'}"
+        )
     if args.execute:
         print("\n  急停：Ctrl+Alt+Q，或把鼠标甩到屏幕角落触发 FAILSAFE")
         print("  执行期间请勿操作鼠标键盘。")
@@ -788,6 +811,7 @@ def archive_payload(
             # **执行引擎必须进存档。** legacy 与 langgraph 并存期间要做端到端对照，
             # 两份存档除了这一项之外长得一模一样，不记下来就分不清哪份是哪个引擎跑的。
             "engine": args.engine,
+            "git_commit": git_commit(),
             # 等待策略也进存档：它决定动作后多久拍下一帧，而那张图是模型
             # 下一步的全部输入。两份存档除了这一项之外一模一样，不记就分不清。
             "adaptive_settle": args.adaptive_settle,

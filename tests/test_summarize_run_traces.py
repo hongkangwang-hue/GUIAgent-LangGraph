@@ -12,10 +12,17 @@ def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
     archive.write_text(
         json.dumps(
             {
+                "git_commit": "example-commit",
                 "records": [
-                    {"task": "copy_paste_text", "verified": False, "trajectory_id": "t1"},
+                    {
+                        "task": "copy_paste_text",
+                        "verified": False,
+                        "trajectory_id": "t1",
+                        "unchanged_click_limit": 4,
+                        "final_check_enabled": True,
+                    },
                     {"task": "write_note", "verified": True, "trajectory_id": "t2"},
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -42,6 +49,9 @@ def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
     report = summarize(archive, tmp_path / "trajectories")
     output = json.dumps(report)
     assert len(report["failures"]) == 1
+    assert report["git_commit"] == "example-commit"
+    assert report["failures"][0]["unchanged_click_limit"] == 4
+    assert report["failures"][0]["final_check_enabled"] is True
     assert report["failures"][0]["steps"][0]["typed_chars"] == 27
     assert "SuperSecret" not in output
     assert "secret.png" not in output
