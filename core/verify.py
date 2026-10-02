@@ -100,11 +100,27 @@ def _own_console_handle() -> int:
         return 0
 
 
+def _is_visible_window(handle: int) -> bool:
+    """窗口必须可见且未最小化；Win+D 不会销毁窗口。"""
+    if not handle:
+        return False
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
+        user32.IsIconic.argtypes = [ctypes.c_void_p]
+        return bool(user32.IsWindowVisible(handle)) and not bool(user32.IsIconic(handle))
+    except Exception:  # noqa: BLE001 —— 无法确认时不能把窗口当作已消失
+        return True
+
+
 def check_window_title(
     pattern: str,
     regex: bool = False,
     should_match: bool = True,
     include_foreground: bool = False,
+    visible_only: bool = False,
 ) -> CheckResult:
     """存在（或不存在）标题匹配的窗口。
 
@@ -151,7 +167,12 @@ def check_window_title(
         window = auto.GetRootControl().GetFirstChildControl()
         while window:
             name = (window.Name or "").strip()
-            if name and (not own or window.NativeWindowHandle != own):
+            handle = window.NativeWindowHandle
+            if (
+                name
+                and (not own or handle != own)
+                and (not visible_only or _is_visible_window(handle))
+            ):
                 titles.append(name)
             window = window.GetNextSiblingControl()
     except Exception as exc:  # noqa: BLE001
@@ -163,7 +184,7 @@ def check_window_title(
         from control.sentinel import foreground_window
 
         foreground = foreground_window()
-        if foreground and foreground.title.strip():
+        if foreground and foreground.title.strip() and not visible_only:
             titles.append(foreground.title.strip())
 
     if regex:

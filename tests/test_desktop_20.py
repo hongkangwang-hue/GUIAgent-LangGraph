@@ -119,6 +119,13 @@ class TestEveryTaskIsWellFormed:
                 if "tasks/setup_env.py --clean" in command:
                     assert command == "python tasks/setup_env.py --clean", task["name"]
 
+    def test_资源管理器与显示桌面的起点可恢复(self, tasks):
+        by_name = {task["name"]: task for task in tasks}
+        assert by_name["open_explorer"]["reset"][0].endswith("--close-explorer")
+        desktop = by_name["minimize_all"]
+        assert desktop["precondition"][0]["visible_only"] is True
+        assert desktop["success_check"][0]["visible_only"] is True
+
     def test_步数上限随难度递增(self, tasks):
         """复杂任务的预算不该低于单步任务的。"""
         budget = {"单步": [], "多步": [], "复杂": []}

@@ -301,7 +301,7 @@ tasks:
         pattern: "资源管理器|此电脑|文件资源管理器|Explorer"
         regex: true
     reset:
-      - python tasks/reset_desktop.py
+      - python tasks/reset_desktop.py --close-explorer
       - taskkill /F /IM notepad.exe /T
     precondition:
       - type: window_title
@@ -354,6 +354,7 @@ tasks:
       - type: window_title
         pattern: "计算器"
         should_match: false
+        visible_only: true
     reset:
       - python tasks/reset_desktop.py
       - taskkill /F /IM CalculatorApp.exe /T
@@ -362,12 +363,11 @@ tasks:
     precondition:
       - type: window_title
         pattern: "计算器"
+        visible_only: true
     note: >
       **这条测的是组合键**（Win+D）或任务栏右下角的「显示桌面」条。
-      判据是「计算器窗口不再可见」而非「进程退出」——最小化不杀进程，
-      所以只能用窗口标题判定。
-      注意：`check_window_title` 枚举的是**可见**窗口，最小化后不在列表里。
-      这一点需在客机上确认一次，不成立则此任务须替换。
+      判据是「计算器窗口不再可见」而非「进程退出」——最小化不杀进程。
+      因此窗口标题判据启用 visible_only，显式排除已最小化窗口。
 
   # =================================================================== #
   # 第 11-17 个：新增多步任务

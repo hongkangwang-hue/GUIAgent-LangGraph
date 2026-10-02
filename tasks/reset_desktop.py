@@ -52,6 +52,40 @@ STRAY_PROCESSES = (
 )
 
 
+def close_explorer_windows() -> str:
+    """只关闭文件夹窗口，不结束承载桌面和任务栏的 explorer.exe。"""
+    if sys.platform != "win32":
+        return "非 Windows，跳过资源管理器窗口清理"
+    import ctypes
+
+    user32 = ctypes.windll.user32
+    callback_type = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p)
+    user32.EnumWindows.argtypes = [callback_type, ctypes.c_void_p]
+    user32.GetClassNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+    user32.PostMessageW.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint,
+        ctypes.c_size_t,
+        ctypes.c_ssize_t,
+    ]
+    handles: list[int] = []
+
+    @callback_type
+    def collect(hwnd, _context):
+        class_name = ctypes.create_unicode_buffer(64)
+        if user32.GetClassNameW(hwnd, class_name, len(class_name)) and class_name.value in {
+            "CabinetWClass",
+            "ExploreWClass",
+        }:
+            handles.append(hwnd)
+        return True
+
+    user32.EnumWindows(collect, None)
+    for handle in handles:
+        user32.PostMessageW(handle, 0x0010, 0, 0)  # WM_CLOSE
+    return f"已请求关闭 {len(handles)} 个资源管理器文件夹窗口"
+
+
 def dismiss_overlays() -> str:
     """Esc 关浮层，Win+D 最小化所有窗口。"""
     try:
@@ -94,10 +128,15 @@ def kill_strays() -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="桌面清场（每轮 reset 的第一步）")
     parser.add_argument("--no-kill", action="store_true", help="只关浮层，不杀进程")
+    parser.add_argument(
+        "--close-explorer", action="store_true", help="关闭残留的资源管理器文件夹窗口"
+    )
     args = parser.parse_args()
 
     if not args.no_kill:
         print(kill_strays())
+    if args.close_explorer:
+        print(close_explorer_windows())
     print(dismiss_overlays())
     return 0
 

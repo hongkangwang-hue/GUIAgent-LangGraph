@@ -127,6 +127,32 @@ def test_file_dialog_foreground_is_checked_when_uia_root_misses_it(monkeypatch):
     assert not result.passed
     assert "打开" in result.detail
 
+
+def test_window_title_visible_only_excludes_minimized_window(monkeypatch):
+    """Win+D 后窗口仍存在，但不应阻止“显示桌面”判定通过。"""
+    import sys
+    from types import SimpleNamespace
+
+    from core import verify
+
+    minimized = SimpleNamespace(
+        Name="计算器",
+        NativeWindowHandle=123,
+        GetNextSiblingControl=lambda: None,
+    )
+    monkeypatch.setattr(verify, "IS_WINDOWS", True)
+    monkeypatch.setattr(verify, "_own_console_handle", lambda: 0)
+    monkeypatch.setattr(verify, "_is_visible_window", lambda handle: handle != 123)
+    monkeypatch.setitem(
+        sys.modules,
+        "uiautomation",
+        SimpleNamespace(
+            GetRootControl=lambda: SimpleNamespace(GetFirstChildControl=lambda: minimized)
+        ),
+    )
+    assert not verify.check_window_title("计算器", should_match=False).passed
+    assert verify.check_window_title("计算器", should_match=False, visible_only=True).passed
+
     def test_打开文件标题必须精确匹配(self):
         """误建的 Cagent-test测试文档.txt 标签不能再算成功。"""
         import re
