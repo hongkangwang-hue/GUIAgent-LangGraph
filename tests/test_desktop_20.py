@@ -126,6 +126,12 @@ class TestEveryTaskIsWellFormed:
         assert desktop["precondition"][0]["visible_only"] is True
         assert desktop["success_check"][0]["visible_only"] is True
 
+    def test_关闭记事本按窗口而非后台进程判定(self, tasks):
+        task = next(item for item in tasks if item["name"] == "close_notepad")
+        assert task["success_check"][0]["type"] == "window_title"
+        assert task["success_check"][0]["should_match"] is False
+        assert task["precondition"][0]["type"] == "window_title"
+
     def test_步数上限随难度递增(self, tasks):
         """复杂任务的预算不该低于单步任务的。"""
         budget = {"单步": [], "多步": [], "复杂": []}

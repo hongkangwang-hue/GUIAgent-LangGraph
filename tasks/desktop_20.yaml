@@ -59,9 +59,10 @@
 # 不成立的任务要替换而不是硬调判据：
 #
 #   - 文件资源管理器的窗口标题实际是什么（`open_explorer` 的正则要能匹配到）
-#   - 最小化后的窗口是否真的从 `check_window_title` 的枚举里消失
-#     （`minimize_all` 的判据完全依赖这一点）
+#   - 客机是否能取得窗口句柄与最小化状态
+#     （`minimize_all` 的 visible_only 判据依赖 Win32 状态）
 #   - 记事本「另存为」对话框的行为（`write_note` 等要在里面输入路径）
+#   - 正式快照的任务栏不要固定 Microsoft 365 Copilot；两次试跑均误点其图标
 #
 # `tasks/setup_env.py --check` 会检查程序是否存在；窗口标题类的
 # 需要人工跑一次 `scripts/capture_gallery.py` 看一眼。
@@ -327,9 +328,10 @@ tasks:
     instruction: 关闭记事本窗口
     max_steps: 6
     success_check:
-      - type: process
-        name: notepad.exe
-        should_run: false
+      - type: window_title
+        pattern: "记事本|Notepad"
+        regex: true
+        should_match: false
     reset:
       - python tasks/reset_desktop.py
       - taskkill /F /IM notepad.exe /T
@@ -337,11 +339,13 @@ tasks:
       - start notepad
       - python tasks/wait_for_process.py notepad.exe
     precondition:
-      - type: process
-        name: notepad.exe
-        should_run: true
+      - type: window_title
+        pattern: "记事本|Notepad"
+        regex: true
     note: >
-      与 close_app（计算器）构成对照。**记事本会弹「是否保存」确认框**
+      此任务要求关闭窗口，故按窗口标题判定；Windows 11 可能在窗口关闭后
+      暂时保留 notepad.exe 进程，不能把进程残留等同于窗口未关闭。
+      **记事本会弹「是否保存」确认框**
       —— 若 Agent 在打开的记事本里输入过内容。这里 reset 开的是空白记事本，
       正常关闭不该弹框；真弹了就是 Agent 多做了动作，那也是有效信息。
 

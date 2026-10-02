@@ -42,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 TASK_FILE = Path("tasks/basic_tasks.yaml")
+W7_TASK_FILE = Path("tasks/desktop_20.yaml")
 REPORT = Path("docs/m2-basic-tasks-report.md")
 
 #: 「最近一次」的固定路径，方便脚本引用。
@@ -69,6 +70,14 @@ def writes_m2_raw(args, offline: bool, record_count: int, aborted: bool = False)
     )
 
 
+def task_runtime_guards(task_file: Path | str, task_name: str, execute: bool) -> tuple[int, bool]:
+    """第 7 周试跑启用空转限制与末步终态检查；M2 历史基线保持原配置。"""
+    week7 = Path(task_file).resolve() == W7_TASK_FILE.resolve()
+    click_limit = 4 if week7 or task_name == "open_file" else 0
+    final_check = bool(execute and (week7 or task_name == "open_file"))
+    return click_limit, final_check
+
+
 @dataclass
 class RunRecord:
     task: str
@@ -84,6 +93,8 @@ class RunRecord:
     trajectory_id: str = ""
     error: str = ""
     latency: dict = field(default_factory=dict)
+    unchanged_click_limit: int = 0
+    final_check_enabled: bool = False
     #: 起点是否成功建立。False 表示这一轮**无效**，既不算成功也不算失败。
     precondition_ok: bool = True
     precondition_detail: str = ""
@@ -536,7 +547,16 @@ def main() -> int:
             print(f"   第 {attempt}/{args.repeats} 次")
             run_reset(task.get("reset"), dry_run=not args.execute)
 
-            record = RunRecord(task=task["name"], title=task["title"], attempt=attempt)
+            click_limit, final_check_enabled = task_runtime_guards(
+                args.tasks, task["name"], args.execute
+            )
+            record = RunRecord(
+                task=task["name"],
+                title=task["title"],
+                attempt=attempt,
+                unchanged_click_limit=click_limit,
+                final_check_enabled=final_check_enabled,
+            )
 
             # **开跑前扫一遍环境。** 哨兵拦得住「对着登录框按回车」，拦不住「点岔的第一下」
             # ——那一下发出时前台还是 Edge。所以 reset 之后、Agent 动手之前，屏幕上若还留着
@@ -584,15 +604,11 @@ def main() -> int:
                         reflector=args.reflector,
                         adaptive_settle=args.adaptive_settle,
                         engine=args.engine,
-                        max_unchanged_click_repeats=(4 if task["name"] == "open_file" else 0),
+                        max_unchanged_click_repeats=click_limit,
                     ),
                     executor_template=args.executor_template,
                     planner_template=args.planner_template,
-                    final_success_check=(
-                        task.get("success_check")
-                        if args.execute and task["name"] == "open_file"
-                        else None
-                    ),
+                    final_success_check=task.get("success_check") if final_check_enabled else None,
                     allowed_actions=allowed,
                 ),
             )

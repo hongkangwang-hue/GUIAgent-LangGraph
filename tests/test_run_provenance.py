@@ -106,6 +106,20 @@ class TestM2RawGuard:
         assert not writes_m2_raw(args, offline=False, record_count=5)
 
 
+class TestWeek7RuntimeGuards:
+    def test_第七周任务限制空转并检查最终状态(self):
+        from scripts.run_basic_tasks import task_runtime_guards
+
+        assert task_runtime_guards("tasks/desktop_20.yaml", "append_line", True) == (4, True)
+        assert task_runtime_guards("tasks/desktop_20.yaml", "close_notepad", True) == (4, True)
+
+    def test_基础任务历史配置不被第七周改动(self):
+        from scripts.run_basic_tasks import task_runtime_guards
+
+        assert task_runtime_guards("tasks/basic_tasks.yaml", "open_browser", True) == (0, False)
+        assert task_runtime_guards("tasks/basic_tasks.yaml", "open_file", True) == (4, True)
+
+
 class TestScreenInfo:
     def test_分辨率与缩放一起取(self):
         """**1920×1080 @100% 和 @150% 下按钮差 1.5 倍。**

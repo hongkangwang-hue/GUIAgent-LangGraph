@@ -556,8 +556,8 @@ class AgentLoop:
         record.meta["unchanged_click_repeat"] = self._unchanged_click_count
         if self._unchanged_click_count >= 2:
             self._reflector_hint = (
-                "已经连续点击同一位置，但截图没有变化。若目标是输入框，聚焦可能本来就不会"
-                "产生明显画面变化；下一步请使用 type 输入目标文字，不要再次点击同一点。"
+                "已经连续点击同一位置，但截图没有变化。不要再点此处，请重新判断当前界面。"
+                "若输入框已聚焦，直接使用 type；若目标可用快捷键完成，可改用 key。"
             )
         if self._unchanged_click_count >= limit:
             return f"同一位置点击 {self._unchanged_click_count} 次且屏幕无变化，已停止重复操作"

@@ -166,7 +166,7 @@ def test_repeated_unchanged_click_feedback_and_stop_match_between_engines(tmp_pa
     assert legacy["result"]["status"] == STOP_ACTION_FAILED
     assert len(legacy["steps"]) == 4
     assert legacy["steps"][3]["meta"]["unchanged_click_repeat"] == 4
-    assert "下一步请使用 type" in legacy["instructions"][2]
+    assert "直接使用 type" in legacy["instructions"][2]
 
 
 def test_graph_observe_retries_context_mismatch_without_langgraph_dependency():
@@ -236,7 +236,7 @@ def test_graph_observe_stops_repeated_unchanged_click_without_langgraph_dependen
             assert result["stop"] is None
         else:
             assert result["stop"][0] == STOP_ACTION_FAILED
-    assert "下一步请使用 type" in loop._reflector_hint
+    assert "直接使用 type" in loop._reflector_hint
 
 
 def test_graph_done_guard_rejects_premature_done_without_langgraph_dependency():
