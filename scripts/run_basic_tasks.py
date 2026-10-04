@@ -115,6 +115,7 @@ class RunRecord:
     #: 起点是否成功建立。False 表示这一轮**无效**，既不算成功也不算失败。
     precondition_ok: bool = True
     precondition_detail: str = ""
+    reset_errors: list[str] = field(default_factory=list)
     #: 子任务总数，与其中「一个动作都没执行就报完成」的个数。
     subtasks: int = 0
     empty_done: int = 0
@@ -268,23 +269,33 @@ def _console() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-def run_reset(commands: list[str], dry_run: bool) -> None:
-    """执行 reset 命令。失败不中断——`taskkill` 在进程本就不存在时会返回
-    非零，那是正常情况，不是错误。"""
-    for command in commands or []:
+def run_reset(commands: list[str], dry_run: bool) -> list[str]:
+    """执行 reset；返回关键命令的失败。taskkill 找不到进程可忽略。"""
+    errors: list[str] = []
+    for index, command in enumerate(commands or [], 1):
         if dry_run:
             print(f"      [演练] reset: {command}")
             continue
-        subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=30,
-        )
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            errors.append(f"reset 第 {index} 条命令超时")
+            continue
+        except OSError as exc:
+            errors.append(f"reset 第 {index} 条命令无法启动（{type(exc).__name__}）")
+            continue
+        if result.returncode != 0 and not command.strip().lower().startswith("taskkill "):
+            errors.append(f"reset 第 {index} 条命令退出码 {result.returncode}")
     if not dry_run and commands:
         time.sleep(1.5)  # 给进程退出与窗口关闭留时间
+    return errors
 
 
 def _slug(text: str) -> str:
@@ -568,7 +579,7 @@ def main() -> int:
 
         for attempt in range(1, args.repeats + 1):
             print(f"   第 {attempt}/{args.repeats} 次")
-            run_reset(task.get("reset"), dry_run=not args.execute)
+            reset_errors = run_reset(task.get("reset"), dry_run=not args.execute)
 
             click_limit, final_check_enabled = task_runtime_guards(
                 args.tasks, task["name"], args.execute
@@ -579,7 +590,17 @@ def main() -> int:
                 attempt=attempt,
                 unchanged_click_limit=click_limit,
                 final_check_enabled=final_check_enabled,
+                reset_errors=reset_errors,
             )
+
+            if reset_errors:
+                record.precondition_ok = False
+                record.precondition_detail = "；".join(reset_errors)
+                abort_reason = f"{task['name']} 第 {attempt} 次重置失败，整批停止：{record.precondition_detail}"
+                print(f"      [停止] {abort_reason}")
+                records.append(record)
+                save()
+                break
 
             # **开跑前扫一遍环境。** 哨兵拦得住「对着登录框按回车」，拦不住「点岔的第一下」
             # ——那一下发出时前台还是 Edge。所以 reset 之后、Agent 动手之前，屏幕上若还留着

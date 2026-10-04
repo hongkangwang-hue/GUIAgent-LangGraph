@@ -84,6 +84,7 @@ def summarize(archive: Path, trajectories: Path) -> dict:
         item = {
             "task": record.get("task"),
             "precondition_ok": record.get("precondition_ok"),
+            "reset_errors": record.get("reset_errors") or [],
             "unchanged_click_limit": record.get("unchanged_click_limit"),
             "final_check_enabled": record.get("final_check_enabled"),
             "loop_status": record.get("loop_status"),

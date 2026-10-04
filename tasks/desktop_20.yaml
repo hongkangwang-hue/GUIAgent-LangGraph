@@ -393,10 +393,15 @@ tasks:
       - python tasks/reset_desktop.py
       - taskkill /F /IM notepad.exe /T
       - python tasks/setup_env.py --clean
+    # 文件不存在还不够：上一轮的记事本若未退出，下一轮仍可能编辑旧窗口。
+    # 这里检查进程；磁盘上的会话恢复需客机截图另行核验。
     precondition:
       - type: file_exists
         path: C:/agent-test/笔记.txt
         should_exist: false
+      - type: process
+        name: notepad.exe
+        should_run: false
     note: >
       **本轮微调新增 type 动作后，这一档才有可能做成。** 训练集里 type
       从 0 条变成 216 条，而这个任务的核心就是输入文本。
@@ -427,6 +432,9 @@ tasks:
         path: C:/agent-test/测试文档.txt
         text: 已审阅
         should_contain: false
+      - type: process
+        name: notepad.exe
+        should_run: false
     note: >
       两条判据的组合堵的是「清空重写」这种伪成功。
       需要 Ctrl+End 或滚动到文件末尾——**scroll 动作在本轮训练集里有
@@ -455,6 +463,9 @@ tasks:
           path: C:/agent-test/目标文件.txt
           text: 需要被复制的内容
           should_contain: false
+        - type: process
+          name: notepad.exe
+          should_run: false
     note: >
       **专门测组合键**：Ctrl+A 全选、Ctrl+C 复制、Ctrl+V 粘贴、Ctrl+S 保存。
       本轮训练集里 key 动作有 254 条（enter 126 / ctrl+s 26 / ctrl+a 25 …），

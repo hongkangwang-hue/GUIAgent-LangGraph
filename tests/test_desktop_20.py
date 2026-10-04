@@ -132,6 +132,17 @@ class TestEveryTaskIsWellFormed:
         assert task["success_check"][0]["should_match"] is False
         assert task["precondition"][0]["type"] == "window_title"
 
+    def test_记事本文件任务启动前须无旧进程(self, tasks):
+        by_name = {task["name"]: task for task in tasks}
+        for name in ("write_note", "append_line", "copy_paste_text"):
+            check = by_name[name]["precondition"]
+            checks = check["checks"] if isinstance(check, dict) else check
+            assert {
+                "type": "process",
+                "name": "notepad.exe",
+                "should_run": False,
+            } in checks, name
+
     def test_步数上限随难度递增(self, tasks):
         """复杂任务的预算不该低于单步任务的。"""
         budget = {"单步": [], "多步": [], "复杂": []}
