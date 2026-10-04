@@ -76,6 +76,23 @@ def summarize_step(step: dict) -> dict:
     }
 
 
+def plan_failure_kind(error: object) -> str:
+    """只输出规划失败类别，不导出可能含请求细节的原始错误。"""
+    if not isinstance(error, str):
+        return "unknown"
+    if "拆解调用失败" in error:
+        return "backend_call"
+    if "拆解结果无法解析" in error:
+        return "parse_error"
+    if "找不到子任务列表" in error:
+        return "missing_subtasks"
+    if "拆解结果为空" in error:
+        return "empty_subtasks"
+    if "指令为空" in error:
+        return "empty_instruction"
+    return "unknown"
+
+
 def summarize(archive: Path, trajectories: Path) -> dict:
     run = json.loads(archive.read_text(encoding="utf-8"))
     failures = []
@@ -101,6 +118,15 @@ def summarize(archive: Path, trajectories: Path) -> dict:
         }
         traj_id = record.get("trajectory_id")
         if traj_id:
+            if record.get("loop_status") == "plan_failed":
+                meta_path = trajectories / traj_id / "meta.json"
+                item["plan_failure_kind"] = "missing_meta"
+                if meta_path.is_file():
+                    try:
+                        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                        item["plan_failure_kind"] = plan_failure_kind(meta.get("error"))
+                    except (OSError, json.JSONDecodeError):
+                        item["plan_failure_kind"] = "unreadable_meta"
             steps_path = trajectories / traj_id / "steps.jsonl"
             if steps_path.is_file():
                 item["steps"] = [
@@ -108,7 +134,7 @@ def summarize(archive: Path, trajectories: Path) -> dict:
                     for line in steps_path.read_text(encoding="utf-8").splitlines()
                     if line.strip()
                 ]
-            else:
+            elif record.get("loop_status") != "plan_failed":
                 item["trace_missing"] = True
         failures.append(item)
     return {

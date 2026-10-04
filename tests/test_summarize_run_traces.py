@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from scripts.summarize_run_traces import safe_keys, summarize
+from scripts.summarize_run_traces import plan_failure_kind, safe_keys, summarize
 
 
 def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
@@ -64,3 +64,36 @@ def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
 def test_only_known_shortcuts_are_exported():
     assert safe_keys(["ctrl", "s"]) == "ctrl+s"
     assert safe_keys("sk-SuperSecretExample123456") == "[redacted]"
+
+
+def test_plan_failure_summary_uses_only_safe_category(tmp_path):
+    archive = tmp_path / "run.json"
+    archive.write_text(
+        json.dumps(
+            {
+                "records": [
+                    {
+                        "task": "minimize_all",
+                        "verified": False,
+                        "loop_status": "plan_failed",
+                        "trajectory_id": "t1",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    trace = tmp_path / "trajectories" / "t1"
+    trace.mkdir(parents=True)
+    (trace / "meta.json").write_text(
+        json.dumps({"error": "拆解结果无法解析：sk-SuperSecretExample123456"}),
+        encoding="utf-8",
+    )
+
+    report = summarize(archive, tmp_path / "trajectories")
+    failure = report["failures"][0]
+    assert failure["plan_failure_kind"] == "parse_error"
+    assert failure["steps"] == []
+    assert "trace_missing" not in failure
+    assert "SuperSecret" not in json.dumps(report)
+    assert plan_failure_kind("拆解调用失败：hidden") == "backend_call"
