@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 SAFE_KEY_PARTS = frozenset(
@@ -81,6 +82,10 @@ def summarize(archive: Path, trajectories: Path) -> dict:
     for record in run.get("records", []):
         if record.get("verified"):
             continue
+        raw_error = record.get("error") or ""
+        error_type = raw_error.partition(":")[0].strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", error_type):
+            error_type = "[redacted]" if raw_error else ""
         item = {
             "task": record.get("task"),
             "precondition_ok": record.get("precondition_ok"),
@@ -88,6 +93,7 @@ def summarize(archive: Path, trajectories: Path) -> dict:
             "unchanged_click_limit": record.get("unchanged_click_limit"),
             "final_check_enabled": record.get("final_check_enabled"),
             "loop_status": record.get("loop_status"),
+            "error_type": error_type,
             "model_said_done": record.get("model_said_done"),
             "trajectory_id": record.get("trajectory_id"),
             "emergency_reason": record.get("emergency_reason"),

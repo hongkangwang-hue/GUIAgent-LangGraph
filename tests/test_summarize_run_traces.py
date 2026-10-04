@@ -21,6 +21,7 @@ def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
                         "unchanged_click_limit": 4,
                         "final_check_enabled": True,
                         "reset_errors": ["reset 第 2 条命令退出码 1"],
+                        "error": "CaptureError: sk-SuperSecretExample123456",
                     },
                     {"task": "write_note", "verified": True, "trajectory_id": "t2"},
                 ],
@@ -54,6 +55,7 @@ def test_summarize_failed_trace_redacts_text_and_raw_output(tmp_path):
     assert report["failures"][0]["unchanged_click_limit"] == 4
     assert report["failures"][0]["final_check_enabled"] is True
     assert report["failures"][0]["reset_errors"] == ["reset 第 2 条命令退出码 1"]
+    assert report["failures"][0]["error_type"] == "CaptureError"
     assert report["failures"][0]["steps"][0]["typed_chars"] == 27
     assert "SuperSecret" not in output
     assert "secret.png" not in output
