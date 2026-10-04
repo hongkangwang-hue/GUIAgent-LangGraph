@@ -255,6 +255,7 @@ class AgentLoop:
         self._reflector_hint = ""
         self._last_unchanged_click: tuple[str, int | None, int | None] | None = None
         self._unchanged_click_count = 0
+        self._pending_visible_shortcut = ""
         # 由上层按任务注入的可选终态检查。返回原因表示拒绝本次 done。
         self.done_guard: Callable[[], str] | None = None
 
@@ -276,6 +277,7 @@ class AgentLoop:
         self._reflector_hint = ""
         self._last_unchanged_click = None
         self._unchanged_click_count = 0
+        self._pending_visible_shortcut = ""
         logger.info("子任务 #%d 开始：%s", subtask_id, subtask)
 
         for iteration in range(1, self.config.max_iterations + 1):
@@ -530,17 +532,35 @@ class AgentLoop:
 
     def _done_guard_reason(self, record: StepRecord) -> str:
         """最终状态未达成时拒绝模型的 done，并把依据写进轨迹。"""
-        if self.done_guard is None:
+        if self.done_guard is not None:
+            try:
+                reason = self.done_guard()
+            except Exception as exc:  # noqa: BLE001 —— 检查失败不能等同任务完成
+                reason = f"最终状态检查失败：{exc}"
+        elif self._pending_visible_shortcut:
+            reason = (
+                f"{self._pending_visible_shortcut} 已发出，但屏幕没有出现预期变化。"
+                "先确认资源管理器的文件列表获得焦点，再重试；"
+                "看到新文件夹的名称编辑框后才能报告完成。"
+            )
+        else:
             return ""
-        try:
-            reason = self.done_guard()
-        except Exception as exc:  # noqa: BLE001 —— 检查失败不能等同任务完成
-            reason = f"最终状态检查失败：{exc}"
         record.meta["done_guard"] = {"accepted": not bool(reason), "reason": reason}
         return reason
 
     def _observe_unchanged_click(self, action, changed: bool | None, record: StepRecord) -> str:
-        """对连续无变化点击给反馈，并在上限处停止空转。"""
+        """对无可见效果的新建文件夹快捷键与连续点击给反馈。"""
+        if changed is True:
+            self._pending_visible_shortcut = ""
+        if action.type.value == "key" and {
+            part.strip().lower() for part in (action.keys or "").split("+")
+        } == {"ctrl", "shift", "n"}:
+            self._last_unchanged_click = None
+            self._unchanged_click_count = 0
+            if changed is False:
+                self._pending_visible_shortcut = "Ctrl+Shift+N"
+                record.meta["shortcut_no_visible_change"] = True
+            return ""
         limit = self.config.max_unchanged_click_repeats
         if not limit:
             return ""

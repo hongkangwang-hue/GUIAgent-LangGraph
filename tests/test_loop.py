@@ -133,6 +133,36 @@ def test_runs_until_model_reports_done() -> None:
     assert result.steps == 3
 
 
+def test_new_folder_shortcut_without_visible_change_rejects_done() -> None:
+    loop, backend, _ = build_loop(
+        [{"action": "key", "keys": "ctrl+shift+n"}, {"done": True}],
+        config=LoopConfig(max_iterations=2, save_frames=False),
+    )
+    result = loop.run_subtask("在资源管理器中新建文件夹")
+    assert result.status == STOP_MAX_ITERATIONS
+    assert result.records[0].meta["shortcut_no_visible_change"] is True
+    assert result.records[1].meta["done_guard"]["accepted"] is False
+    assert len(backend.calls) == 2
+
+
+def test_new_folder_shortcut_with_visible_change_accepts_done(monkeypatch) -> None:
+    from perception.change import ChangeReport
+
+    monkeypatch.setattr(
+        "perception.change.compare",
+        lambda _before, _after, threshold: ChangeReport(
+            changed=True, ratio=0.1, threshold=threshold
+        ),
+    )
+    loop, _, _ = build_loop(
+        [{"action": "key", "keys": "ctrl+shift+n"}, {"done": True}],
+        config=LoopConfig(max_iterations=2, save_frames=False),
+    )
+    result = loop.run_subtask("在资源管理器中新建文件夹")
+    assert result.status == STOP_DONE
+    assert "done_guard" not in result.records[1].meta
+
+
 def test_screenshot_taken_before_and_after_each_action() -> None:
     """动作后必须重新截图回传，否则模型看到的永远是第一帧。"""
     loop, _, _ = build_loop([{"action": "left_click", "x": 1, "y": 1}, {"done": True}])

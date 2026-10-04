@@ -141,6 +141,7 @@ class GraphAgentLoop(AgentLoop):
         self._reflector_hint = ""
         self._last_unchanged_click = None
         self._unchanged_click_count = 0
+        self._pending_visible_shortcut = ""
         logger.info("子任务 #%d 开始：%s", subtask_id, subtask)
 
         with _tracing_disabled():
