@@ -75,6 +75,36 @@ class TestArchiveRecordsProvenance:
         screen = self._payload()["screen"]
         assert "resolution" in screen or screen == {}, "取不到就该是空，不能猜一个"
 
+    def test_传入首帧屏幕信息时不再次初始化截图器(self, monkeypatch):
+        import scripts.run_basic_tasks as mod
+
+        def unexpected_capture():
+            raise AssertionError("存档时不得重新创建截图器")
+
+        monkeypatch.setattr(mod, "_screen_info", unexpected_capture)
+        args = make_args(tasks="tasks/desktop_20.yaml")
+        payload = json.loads(
+            mod.archive_payload(
+                [],
+                args,
+                "在线",
+                offline=False,
+                partial=False,
+                screen_info={"resolution": "1920x1080"},
+            )
+        )
+        assert payload["screen"] == {"resolution": "1920x1080"}
+
+    def test_首帧记录实际截图引擎(self):
+        from types import SimpleNamespace
+
+        from scripts.run_basic_tasks import _screen_info_from_shot
+
+        shot = SimpleNamespace(width=1920, height=1080, engine="mss")
+        info = _screen_info_from_shot(shot)
+        assert info["resolution"] == "1920x1080"
+        assert info["capture_engine"] == "mss"
+
     def test_已有的溯源字段没被弄丢(self):
         """`backend` / `offline` / `tag` / `partial` 是既有的护栏，一起钉住。"""
         payload = self._payload()

@@ -501,6 +501,7 @@ def main() -> int:
 
     capturer = ScreenCapturer()
     probe = capturer.capture(fresh=True)
+    screen_info = _screen_info_from_shot(probe)
     scaler = CoordinateScaler(probe.region)
     # **留空时解析成 SessionConfig 的默认值，并写回 args。**
     # 不写字面量默认值：那样 SessionConfig 改了默认、这里不跟着改，
@@ -557,6 +558,7 @@ def main() -> int:
                 partial=partial,
                 aborted=abort_reason,
                 safety_setup=safety_setup,
+                screen_info=screen_info,
             ),
             encoding="utf-8",
         )
@@ -760,6 +762,7 @@ def main() -> int:
     save(partial=bool(abort_reason))
     executor.stop()
     backend.close()
+    capturer.close()
     render(
         records,
         args,
@@ -768,22 +771,33 @@ def main() -> int:
         archive=archive,
         aborted=abort_reason,
         safety_setup=safety_setup,
+        screen_info=screen_info,
     )
     return 3 if abort_reason else 0
 
 
-def _screen_info() -> dict:
-    """当前屏幕分辨率与 DPI 缩放。取不到就留空,不要猜。
+def _screen_info_from_shot(shot) -> dict:
+    """复用运行开始时的截图记录屏幕信息，避免再次初始化 dxcam。"""
+    info = {"resolution": f"{shot.width}x{shot.height}"}
+    if getattr(shot, "engine", ""):
+        info["capture_engine"] = shot.engine
+    try:
+        from perception.dpi import describe as dpi_describe
 
-    分辨率与缩放**必须一起记**:1920x1080 @100% 和 @150% 下,同一个按钮
-    在截图里的像素尺寸差 1.5 倍。只记一个说不清模型看到的元素有多大。
-    """
+        info["dpi"] = dpi_describe()
+    except Exception:  # noqa: BLE001
+        pass
+    return info
+
+
+def _screen_info() -> dict:
+    """独立调用时读取屏幕信息；批量运行改用已取得的首帧。"""
     try:
         from perception.capture import ScreenCapturer
 
         with ScreenCapturer() as cap:
             shot = cap.capture()
-        info = {"resolution": f"{shot.width}x{shot.height}"}
+        return _screen_info_from_shot(shot)
     except Exception:  # noqa: BLE001 —— 取不到屏幕信息不该让整轮跑不起来
         info = {}
     try:
@@ -803,6 +817,7 @@ def archive_payload(
     partial: bool,
     aborted: str = "",
     safety_setup: dict | None = None,
+    screen_info: dict | None = None,
 ) -> str:
     """存档的 JSON 文本。增量写与最终写共用同一份构造。
 
@@ -842,7 +857,7 @@ def archive_payload(
             # **屏幕设置也必须进存档。** 同一天查出报告写错了客机分辨率
             # (把宿主机的 2560x1600 当成了客机的),而 §9 已证明分辨率值
             # 2 倍坐标误差——一个能左右结论的变量,存档里却查不到。
-            "screen": _screen_info(),
+            "screen": screen_info if screen_info is not None else _screen_info(),
             # **快照名决定这批数据能和谁比。** 读不到就只能靠人传，
             # 漏传时下面会打警告，但不阻断——数据本身仍然有价值。
             "guest_snapshot": args.guest_snapshot or None,
@@ -904,6 +919,7 @@ def render(
     archive: Path | None = None,
     aborted: str = "",
     safety_setup: dict | None = None,
+    screen_info: dict | None = None,
 ) -> None:
     from collections import defaultdict
 
@@ -1005,6 +1021,7 @@ def render(
         partial=bool(aborted),
         aborted=aborted,
         safety_setup=safety_setup,
+        screen_info=screen_info,
     )
     # **只有「在线 + 基础任务 + 5 次 + 全量 + 实机」才写 M2 快捷路径。**
     #
