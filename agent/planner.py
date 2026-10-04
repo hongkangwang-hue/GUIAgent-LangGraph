@@ -42,6 +42,8 @@ logger = logging.getLogger(__name__)
 
 #: 子任务数量上限。M2「明确不做」第 6 条：不做复杂任务（超过 8 步 / 跨应用）
 MAX_SUBTASKS = 8
+PLAN_BACKEND_RETRIES = 1
+PLAN_RETRY_DELAY_S = 1.0
 
 #: 给规划器加的硬约束段，`allowed_actions` 非空时追加到系统提示末尾。
 #:
@@ -139,6 +141,11 @@ def _action_verbs(goal: str) -> list[str]:
 
 class PlanError(RuntimeError):
     """拆解失败。"""
+
+    def __init__(self, message: str, *, backend_kind: str = "", backend_attempts: int = 0) -> None:
+        super().__init__(message)
+        self.backend_kind = backend_kind
+        self.backend_attempts = backend_attempts
 
 
 @dataclass
@@ -282,6 +289,7 @@ class Plan:
     truncated: int = 0
     #: 规划阶段针对不可观测目标做过的确定性修正，进轨迹供复盘。
     repairs: list[dict] = field(default_factory=list)
+    backend_attempts: int = 1
 
     def goals(self) -> list[str]:
         return [s.goal for s in self.subtasks]
@@ -293,6 +301,7 @@ class Plan:
             "prompt": dict(self.prompt),
             "truncated": self.truncated,
             "repairs": list(self.repairs),
+            "backend_attempts": self.backend_attempts,
             "cost_cny": round(self.cost_cny, 6),
         }
 
@@ -414,10 +423,21 @@ class Planner:
         user = self.template.render_user(instruction=instruction.strip())
 
         start = time.perf_counter()
-        try:
-            raw = self._ask(system, user, screenshot)
-        except LLMBackendError as exc:
-            raise PlanError(f"拆解调用失败：{exc}") from exc
+        for attempt in range(1, PLAN_BACKEND_RETRIES + 2):
+            try:
+                raw = self._ask(system, user, screenshot)
+                break
+            except LLMBackendError as exc:
+                if not exc.retryable or attempt > PLAN_BACKEND_RETRIES:
+                    raise PlanError(
+                        f"拆解调用失败：{exc}",
+                        backend_kind=exc.kind,
+                        backend_attempts=attempt,
+                    ) from exc
+                logger.warning(
+                    "规划调用失败（%s），将在 %.1f 秒后重试", exc.kind, PLAN_RETRY_DELAY_S
+                )
+                time.sleep(PLAN_RETRY_DELAY_S)
         latency_ms = (time.perf_counter() - start) * 1000.0
 
         subtasks, truncated = self._parse(raw.text)
@@ -444,6 +464,7 @@ class Planner:
             prompt=self.template.as_dict(),
             truncated=truncated,
             repairs=repairs,
+            backend_attempts=attempt,
         )
 
         warnings = plan.granularity_report()

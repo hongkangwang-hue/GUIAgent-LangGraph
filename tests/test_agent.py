@@ -32,7 +32,7 @@ from agent.prompts import (
     render_action_reference,
 )
 from control.actions import ACTION_SPECS, CORE_ACTIONS, Action
-from llm.base import HistoryStep
+from llm.base import HistoryStep, LLMBackendError
 from llm.fake import ScriptedBackend
 
 
@@ -197,6 +197,44 @@ def test_plan_rejects_unparseable_output() -> None:
 def test_plan_rejects_empty_subtask_list() -> None:
     with pytest.raises(PlanError):
         Planner(_plan_backend('{"subtasks": []}')).plan("打开浏览器")
+
+
+def test_planner_retries_only_retryable_backend_error(monkeypatch) -> None:
+    monkeypatch.setattr("agent.planner.time.sleep", lambda _: None)
+    backend = ScriptedBackend(
+        [
+            LLMBackendError("timeout", retryable=True, kind="transient"),
+            {"raw_text": '{"subtasks":[{"goal":"点击桌面"}]}', "done": True},
+        ]
+    )
+    plan = Planner(backend).plan("显示桌面")
+    assert plan.backend_attempts == 2
+    assert plan.as_dict()["backend_attempts"] == 2
+    assert len(backend.calls) == 2
+
+
+def test_planner_does_not_retry_nonretryable_error(monkeypatch) -> None:
+    monkeypatch.setattr("agent.planner.time.sleep", lambda _: pytest.fail("unexpected retry"))
+    backend = ScriptedBackend([LLMBackendError("hidden", kind="auth")])
+    with pytest.raises(PlanError) as info:
+        Planner(backend).plan("显示桌面")
+    assert info.value.backend_kind == "auth"
+    assert info.value.backend_attempts == 1
+    assert len(backend.calls) == 1
+
+
+def test_planner_stops_after_one_retry(monkeypatch) -> None:
+    monkeypatch.setattr("agent.planner.time.sleep", lambda _: None)
+    backend = ScriptedBackend(
+        [
+            LLMBackendError("first", retryable=True, kind="transient"),
+            LLMBackendError("second", retryable=True, kind="transient"),
+        ]
+    )
+    with pytest.raises(PlanError) as info:
+        Planner(backend).plan("显示桌面")
+    assert info.value.backend_attempts == 2
+    assert len(backend.calls) == 2
 
 
 @pytest.mark.parametrize("key", ["subtasks", "plan", "steps", "tasks"])

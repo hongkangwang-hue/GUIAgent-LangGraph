@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent.context import ContextPolicy, ContextWindow, Conversation
-from agent.planner import Plan, PlanError, Planner
+from agent.planner import PLAN_BACKEND_RETRIES, Plan, PlanError, Planner
 from agent.prompts import PromptTemplate, load_template
 from core.graph_loop import build_agent_loop
 from core.loop import STOP_DONE, LoopConfig, LoopResult
@@ -126,6 +126,7 @@ class SessionConfig:
             "executor_template": self.executor_template,
             "final_success_check": self.final_success_check,
             "plan_with_screenshot": self.plan_with_screenshot,
+            "planner_backend_retries": PLAN_BACKEND_RETRIES,
             "space_name": self.space_name,
             "image_size": list(self.image_size),
             # **进轨迹存档。** 动作集是能左右结论的变量,不记下来事后
@@ -390,6 +391,10 @@ class Session:
             result.reason = str(exc)
             result.duration_s = time.perf_counter() - started
             writer.meta.subtasks = []
+            writer.meta.meta["plan_failure"] = {
+                "backend_kind": exc.backend_kind,
+                "backend_attempts": exc.backend_attempts,
+            }
             writer.finish(status="failed", error=f"拆解失败：{exc}")
             logger.error("拆解失败：%s", exc)
             return result

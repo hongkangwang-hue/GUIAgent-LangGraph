@@ -93,6 +93,30 @@ def plan_failure_kind(error: object) -> str:
     return "unknown"
 
 
+def plan_backend_kind(meta: dict) -> str:
+    """从结构化字段或旧轨迹错误中提取白名单类别，不返回原始错误。"""
+    allowed = {
+        "transient",
+        "rate_limit",
+        "timeout",
+        "quota",
+        "auth",
+        "bad_request",
+        "insufficient_balance",
+        "encode_error",
+        "missing_dependency",
+        "unknown",
+    }
+    extra = meta.get("meta")
+    structured = extra.get("plan_failure", {}) if isinstance(extra, dict) else {}
+    kind = structured.get("backend_kind") if isinstance(structured, dict) else None
+    if not isinstance(kind, str):
+        error = meta.get("error")
+        match = re.search(r"调用失败（([a-z_]+)）", error) if isinstance(error, str) else None
+        kind = match.group(1) if match else None
+    return kind if kind in allowed else "unknown"
+
+
 def summarize(archive: Path, trajectories: Path) -> dict:
     run = json.loads(archive.read_text(encoding="utf-8"))
     failures = []
@@ -125,6 +149,16 @@ def summarize(archive: Path, trajectories: Path) -> dict:
                     try:
                         meta = json.loads(meta_path.read_text(encoding="utf-8"))
                         item["plan_failure_kind"] = plan_failure_kind(meta.get("error"))
+                        if item["plan_failure_kind"] == "backend_call":
+                            item["plan_backend_kind"] = plan_backend_kind(meta)
+                            extra = meta.get("meta")
+                            failure = (
+                                extra.get("plan_failure", {}) if isinstance(extra, dict) else {}
+                            )
+                            if isinstance(failure, dict):
+                                attempts = failure.get("backend_attempts")
+                                if type(attempts) is int and 1 <= attempts <= 2:
+                                    item["plan_backend_attempts"] = attempts
                     except (OSError, json.JSONDecodeError):
                         item["plan_failure_kind"] = "unreadable_meta"
             steps_path = trajectories / traj_id / "steps.jsonl"

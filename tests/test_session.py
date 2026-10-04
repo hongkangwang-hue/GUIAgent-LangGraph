@@ -19,6 +19,7 @@ from control.executor import ActionExecutor
 from core.loop import LoopConfig
 from core.trajectory import TrajectoryReader
 from grounding.native import NativeGrounding
+from llm.base import LLMBackendError
 from llm.fake import ScriptedBackend
 from perception.capture import Screenshot
 from perception.coordinate import CoordinateScaler
@@ -279,6 +280,22 @@ def test_plan_failure_is_recorded(tmp_path) -> None:
     assert TrajectoryReader(result.trajectory_dir).meta.status == "failed"
 
 
+def test_plan_backend_failure_records_safe_kind_and_attempts(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("agent.planner.time.sleep", lambda _: None)
+    session, backend = build(
+        [
+            LLMBackendError("first secret", retryable=True, kind="transient"),
+            LLMBackendError("second secret", retryable=True, kind="transient"),
+        ],
+        tmp_path,
+    )
+    result = session.run("显示桌面")
+    meta = TrajectoryReader(result.trajectory_dir).meta
+    assert result.status == "plan_failed"
+    assert meta.meta["plan_failure"] == {"backend_kind": "transient", "backend_attempts": 2}
+    assert len(backend.calls) == 2
+
+
 def test_subtask_failure_stops_the_rest(tmp_path) -> None:
     """GUI 操作有强顺序依赖，前一步没成往下走全是无效点击。"""
     script = [
@@ -316,6 +333,7 @@ def test_trajectory_records_plan_and_config(tmp_path) -> None:
     assert meta.meta["executor_template"] == "executor_v1"
     assert meta.meta["context"]["k"] == 3
     assert meta.meta["dry_run"] is True
+    assert meta.meta["planner_backend_retries"] == 1
     assert "plan" in meta.meta
 
 

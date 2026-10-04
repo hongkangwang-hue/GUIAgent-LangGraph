@@ -97,3 +97,48 @@ def test_plan_failure_summary_uses_only_safe_category(tmp_path):
     assert "trace_missing" not in failure
     assert "SuperSecret" not in json.dumps(report)
     assert plan_failure_kind("拆解调用失败：hidden") == "backend_call"
+
+
+def test_plan_backend_kind_redacts_error_details(tmp_path) -> None:
+    archive = tmp_path / "run.json"
+    archive.write_text(
+        json.dumps(
+            {"records": [{"verified": False, "loop_status": "plan_failed", "trajectory_id": "t1"}]}
+        ),
+        encoding="utf-8",
+    )
+    trace = tmp_path / "trajectories" / "t1"
+    trace.mkdir(parents=True)
+    (trace / "meta.json").write_text(
+        json.dumps(
+            {
+                "error": "拆解失败：拆解调用失败：百炼 调用失败（transient）：sk-SuperSecretExample123456",
+                "meta": {"plan_failure": {"backend_kind": "transient", "backend_attempts": 2}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = summarize(archive, tmp_path / "trajectories")
+    failure = report["failures"][0]
+    assert failure["plan_backend_kind"] == "transient"
+    assert failure["plan_backend_attempts"] == 2
+    assert "SuperSecret" not in json.dumps(report)
+
+
+def test_plan_backend_kind_from_legacy_error(tmp_path) -> None:
+    archive = tmp_path / "run.json"
+    archive.write_text(
+        json.dumps(
+            {"records": [{"verified": False, "loop_status": "plan_failed", "trajectory_id": "t1"}]}
+        ),
+        encoding="utf-8",
+    )
+    trace = tmp_path / "trajectories" / "t1"
+    trace.mkdir(parents=True)
+    (trace / "meta.json").write_text(
+        json.dumps({"error": "拆解失败：拆解调用失败：百炼 调用失败（auth）：hidden"}),
+        encoding="utf-8",
+    )
+    failure = summarize(archive, tmp_path / "trajectories")["failures"][0]
+    assert failure["plan_backend_kind"] == "auth"
+    assert "plan_backend_attempts" not in failure
