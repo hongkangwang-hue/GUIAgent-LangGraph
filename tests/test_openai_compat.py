@@ -147,9 +147,11 @@ def test_qwen37_plus_client_disables_thinking(monkeypatch) -> None:
     for model in ("qwen3.7-plus", "qwen3.7-plus-2026-05-26"):
         OpenAICompatBackend(config=resolve("dashscope", model=model))._ensure_client()
         assert calls[-1]["extra_body"] == {"enable_thinking": False}
+        assert calls[-1]["model_kwargs"] == {"response_format": {"type": "json_object"}}
 
     OpenAICompatBackend(config=resolve("dashscope", model="qwen3-vl-8b-instruct"))._ensure_client()
     assert "extra_body" not in calls[-1]
+    assert "model_kwargs" not in calls[-1]
 
 
 def test_missing_key_is_a_clear_error(monkeypatch) -> None:

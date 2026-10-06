@@ -278,8 +278,10 @@ class OpenAICompatBackend(LLMBackend):
         }
         if self.config.provider.key == "dashscope" and self.config.model.startswith("qwen3.7-plus"):
             # 该系列默认开启思考模式。动作循环只解析回答正文中的单个 JSON，
-            # 不需要独立的 reasoning_content；显式关闭以减少空正文/格式漂移。
+            # 不需要独立的 reasoning_content；阿里云的 JSON Object 模式可
+            # 约束规划器和执行器的回复为合法 JSON。两套提示词均含 JSON 字样。
             client_kwargs["extra_body"] = {"enable_thinking": False}
+            client_kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
         self._client = ChatOpenAI(**client_kwargs)
         logger.info(
             "已连接 %s：model=%s base_url=%s",
