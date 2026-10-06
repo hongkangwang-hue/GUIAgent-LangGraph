@@ -7,7 +7,7 @@ M2 文档原计划写一个 `QwenVLAPIBackend`，M3 再补 GLM-4V 与 Llama 的�
 
 | 平台 | 模型 | 端点 |
 |---|---|---|
-| 阿里云百炼 | qwen3.7-plus | dashscope.aliyuncs.com/compatible-mode/v1 |
+| 阿里云百炼 | qwen3-vl-8b-instruct | dashscope.aliyuncs.com/compatible-mode/v1 |
 | 智谱开放平台 | glm-4.6v-flash | open.bigmodel.cn/api/paas/v4 |
 | NVIDIA NIM | meta/llama-3.2-11b-vision-instruct | integrate.api.nvidia.com/v1 |
 
@@ -100,7 +100,7 @@ PROVIDERS: dict[str, Provider] = {
         base_url_env="DASHSCOPE_BASE_URL",
         model_env="PLANNER_MODEL",
         default_base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        default_model="qwen3.7-plus",
+        default_model="qwen3-vl-8b-instruct",
         notes="OpenAI 兼容模式。支持截图输入，供桌面 GUI 任务使用",
     ),
     "zhipu": Provider(
