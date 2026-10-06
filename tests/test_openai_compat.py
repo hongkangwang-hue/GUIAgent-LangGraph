@@ -125,6 +125,12 @@ def test_explicit_model_overrides_env(monkeypatch) -> None:
     assert resolve("dashscope", model="qwen3-vl-30b").model == "qwen3-vl-30b"
 
 
+def test_dashscope_default_model_is_qwen37_plus(monkeypatch) -> None:
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.delenv("PLANNER_MODEL", raising=False)
+    assert resolve("dashscope").model == "qwen3.7-plus"
+
+
 def test_missing_key_is_a_clear_error(monkeypatch) -> None:
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
     with pytest.raises(ProviderNotConfigured) as info:
