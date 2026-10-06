@@ -267,15 +267,20 @@ class OpenAICompatBackend(LLMBackend):
                 kind="missing_dependency",
             ) from exc
 
-        self._client = ChatOpenAI(
-            model=self.config.model,
-            base_url=self.config.base_url,
-            api_key=self.config.api_key,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            timeout=self.timeout,
-            max_retries=0,  # 重试由 AgentLoop 统一管，两层重试会把成本翻倍
-        )
+        client_kwargs: dict[str, Any] = {
+            "model": self.config.model,
+            "base_url": self.config.base_url,
+            "api_key": self.config.api_key,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "timeout": self.timeout,
+            "max_retries": 0,  # 重试由 AgentLoop 统一管，两层重试会把成本翻倍
+        }
+        if self.config.provider.key == "dashscope" and self.config.model.startswith("qwen3.7-plus"):
+            # 该系列默认开启思考模式。动作循环只解析回答正文中的单个 JSON，
+            # 不需要独立的 reasoning_content；显式关闭以减少空正文/格式漂移。
+            client_kwargs["extra_body"] = {"enable_thinking": False}
+        self._client = ChatOpenAI(**client_kwargs)
         logger.info(
             "已连接 %s：model=%s base_url=%s",
             self.config.provider.label,

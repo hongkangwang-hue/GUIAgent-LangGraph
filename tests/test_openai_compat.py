@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import base64
+import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -129,6 +131,25 @@ def test_dashscope_default_model_is_qwen37_plus(monkeypatch) -> None:
     monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
     monkeypatch.delenv("PLANNER_MODEL", raising=False)
     assert resolve("dashscope").model == "qwen3.7-plus"
+
+
+def test_qwen37_plus_client_disables_thinking(monkeypatch) -> None:
+    calls = []
+
+    def fake_chat_openai(**kwargs):
+        calls.append(kwargs)
+        return object()
+
+    monkeypatch.setitem(
+        sys.modules, "langchain_openai", SimpleNamespace(ChatOpenAI=fake_chat_openai)
+    )
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    for model in ("qwen3.7-plus", "qwen3.7-plus-2026-05-26"):
+        OpenAICompatBackend(config=resolve("dashscope", model=model))._ensure_client()
+        assert calls[-1]["extra_body"] == {"enable_thinking": False}
+
+    OpenAICompatBackend(config=resolve("dashscope", model="qwen3-vl-8b-instruct"))._ensure_client()
+    assert "extra_body" not in calls[-1]
 
 
 def test_missing_key_is_a_clear_error(monkeypatch) -> None:

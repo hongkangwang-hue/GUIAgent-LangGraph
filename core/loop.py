@@ -382,6 +382,8 @@ class AgentLoop:
         except LLMBackendError as exc:
             record.execution_status = "error"
             record.error, record.error_type = str(exc), exc.kind
+            if exc.kind == "parse_error":
+                record.meta["parse_output_chars"] = len(exc.raw)
             record.latency = latency.as_dict()
             return self._commit(record), (STOP_BACKEND_ERROR, str(exc))
 

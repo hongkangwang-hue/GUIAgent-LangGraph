@@ -320,6 +320,8 @@ class GraphAgentLoop(AgentLoop):
         except LLMBackendError as exc:
             record.execution_status = "error"
             record.error, record.error_type = str(exc), exc.kind
+            if exc.kind == "parse_error":
+                record.meta["parse_output_chars"] = len(exc.raw)
             return {"stop": (STOP_BACKEND_ERROR, str(exc))}
 
         latency.api_ms = intent.latency_ms

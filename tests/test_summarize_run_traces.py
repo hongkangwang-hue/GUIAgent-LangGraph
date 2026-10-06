@@ -66,6 +66,30 @@ def test_only_known_shortcuts_are_exported():
     assert safe_keys("sk-SuperSecretExample123456") == "[redacted]"
 
 
+def test_parse_failure_summary_exposes_only_output_length(tmp_path):
+    archive = tmp_path / "run.json"
+    archive.write_text(
+        json.dumps({"records": [{"verified": False, "trajectory_id": "t1"}]}),
+        encoding="utf-8",
+    )
+    trace = tmp_path / "trajectories" / "t1"
+    trace.mkdir(parents=True)
+    (trace / "steps.jsonl").write_text(
+        json.dumps(
+            {
+                "step": 1,
+                "error_type": "parse_error",
+                "raw_output": "sk-SuperSecretExample123456",
+                "meta": {"parse_output_chars": 27},
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = summarize(archive, tmp_path / "trajectories")
+    assert report["failures"][0]["steps"][0]["parse_output_chars"] == 27
+    assert "SuperSecret" not in json.dumps(report)
+
+
 def test_plan_failure_summary_uses_only_safe_category(tmp_path):
     archive = tmp_path / "run.json"
     archive.write_text(

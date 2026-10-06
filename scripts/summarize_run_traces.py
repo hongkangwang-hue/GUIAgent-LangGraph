@@ -61,7 +61,7 @@ def summarize_step(step: dict) -> dict:
     change = (step.get("meta") or {}).get("change") or {}
     action = intent.get("action_type") or real.get("action") or ""
     typed = params.get("text")
-    return {
+    summary = {
         "step": step.get("step"),
         "subtask_id": step.get("subtask_id"),
         "action": action,
@@ -74,6 +74,10 @@ def summarize_step(step: dict) -> dict:
         "error_type": step.get("error_type"),
         "screen_change_ratio": change.get("ratio"),
     }
+    parse_chars = (step.get("meta") or {}).get("parse_output_chars")
+    if step.get("error_type") == "parse_error" and type(parse_chars) is int and parse_chars >= 0:
+        summary["parse_output_chars"] = parse_chars
+    return summary
 
 
 def plan_failure_kind(error: object) -> str:
