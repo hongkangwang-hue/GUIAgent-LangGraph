@@ -151,6 +151,11 @@ class TestEveryTaskIsWellFormed:
         assert max(budget["单步"]) <= min(budget["多步"])
         assert max(budget["多步"]) <= min(budget["复杂"])
 
+    def test_复杂任务计划不会被旧八条上限截断(self, tasks):
+        complex_tasks = [task for task in tasks if task["difficulty"] == "复杂"]
+        assert len(complex_tasks) == 3
+        assert all(task.get("max_subtasks") == 16 for task in complex_tasks)
+
 
 class TestChecksAreSupported:
     """判据里用的类型和参数，`core.verify` 必须真的支持。

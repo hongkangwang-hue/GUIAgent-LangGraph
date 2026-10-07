@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent.context import ContextPolicy, ContextWindow, Conversation
-from agent.planner import PLAN_BACKEND_RETRIES, Plan, PlanError, Planner
+from agent.planner import MAX_SUBTASKS, PLAN_BACKEND_RETRIES, Plan, PlanError, Planner
 from agent.prompts import PromptTemplate, load_template
 from core.graph_loop import build_agent_loop
 from core.loop import STOP_DONE, LoopConfig, LoopResult
@@ -56,6 +56,8 @@ class SessionConfig:
     #: 提示词模板名。M3 消融换版本就是改这两个
     planner_template: str = "planner_v1"
     executor_template: str = "executor_v1"
+    #: M2 默认至多 8 条；第 7 周复杂任务可在任务清单中单独放宽。
+    max_subtasks: int = MAX_SUBTASKS
     #: 仅在最后一个子任务报告 done 时检查终态；未达成则把原因反馈给模型继续执行。
     final_success_check: dict | list | None = None
 
@@ -124,6 +126,7 @@ class SessionConfig:
         return {
             "planner_template": self.planner_template,
             "executor_template": self.executor_template,
+            "max_subtasks": self.max_subtasks,
             "final_success_check": self.final_success_check,
             "plan_with_screenshot": self.plan_with_screenshot,
             "planner_backend_retries": PLAN_BACKEND_RETRIES,
@@ -379,6 +382,7 @@ class Session:
         planner = Planner(
             self.backend,
             template=self.planner_template,
+            max_subtasks=self.config.max_subtasks,
             with_screenshot=self.config.plan_with_screenshot,
             allowed_actions=self.config.allowed_actions,
         )

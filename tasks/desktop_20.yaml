@@ -579,6 +579,7 @@ tasks:
     difficulty: 复杂
     instruction: 用计算器算出 123 加 456 的结果，把结果数字写进记事本并保存到 C:\agent-test\笔记.txt
     max_steps: 30
+    max_subtasks: 16
     success_check:
       - type: file_contains
         path: C:/agent-test/笔记.txt
@@ -606,6 +607,7 @@ tasks:
     difficulty: 复杂
     instruction: 打开 C:\agent-test\测试文档.txt 看清楚里面的「测试行 3」是什么内容，然后新建一个记事本，把那一行的内容写进去，保存到 C:\agent-test\目标文件.txt
     max_steps: 30
+    max_subtasks: 16
     success_check:
       - type: file_contains
         path: C:/agent-test/目标文件.txt
@@ -635,6 +637,7 @@ tasks:
     difficulty: 复杂
     instruction: 打开计算器算出 100 减 37 的结果，打开记事本把结果写下来保存到 C:\agent-test\笔记.txt，最后关闭计算器
     max_steps: 40
+    max_subtasks: 16
     success_check:
       mode: all
       checks:

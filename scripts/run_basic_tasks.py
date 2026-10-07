@@ -654,6 +654,7 @@ def main() -> int:
                     ),
                     executor_template=args.executor_template,
                     planner_template=args.planner_template,
+                    max_subtasks=task.get("max_subtasks", 8),
                     final_success_check=task.get("success_check") if final_check_enabled else None,
                     allowed_actions=allowed,
                 ),

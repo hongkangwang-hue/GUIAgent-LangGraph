@@ -100,6 +100,26 @@ def test_full_chain(tmp_path) -> None:
     assert result.total_steps == 4
 
 
+def test_session_uses_task_specific_subtask_limit(tmp_path) -> None:
+    """复杂任务的保存与收尾步骤不能被旧的 8 条上限截掉。"""
+    plan = (
+        '{"subtasks":['
+        + ",".join(f'{{"goal":"步骤{i}","expected":"状态{i}"}}' for i in range(12))
+        + "]}"
+    )
+    config = SessionConfig(
+        max_subtasks=16,
+        loop=LoopConfig(max_iterations=1, save_frames=False),
+    )
+    session, _ = build([{"raw_text": plan}, *([{"done": True}] * 12)], tmp_path, config=config)
+    result = session.run("完成复杂任务")
+    assert result.plan is not None
+    assert len(result.plan.subtasks) == 12
+    assert result.plan.truncated == 0
+    assert len(result.outcomes) == 12
+    assert result.status == "completed"
+
+
 def test_final_success_check_rejects_premature_done(tmp_path) -> None:
     """最后一步自报 done 时，终态不成立就反馈模型并继续。"""
     target = tmp_path / "尚未打开的文件"
