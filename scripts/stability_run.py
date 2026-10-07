@@ -41,9 +41,7 @@ M2 的每一批评测都在 20 分钟以内，而且中间人一直看着。M5 �
 from __future__ import annotations
 
 import argparse
-import contextlib
 import json
-import subprocess
 import sys
 import time
 import traceback
@@ -89,6 +87,11 @@ class Report:
     started_at: str = ""
     minutes: float = 0.0
     executed: bool = False
+    model: str = ""
+    engine: str = ""
+    planner_template: str = ""
+    executor_template: str = ""
+    aborted_reason: str = ""
     rounds: list = field(default_factory=list)
     samples: list = field(default_factory=list)
     errors: dict = field(default_factory=dict)
@@ -176,24 +179,6 @@ def steady_slope(samples: list[Sample], field_name: str) -> tuple[float, float]:
     return overall, _slope(half, field_name)
 
 
-def run_reset(commands: list[str], dry_run: bool) -> None:
-    for command in commands or []:
-        if dry_run:
-            continue
-        # reset 卡住不该拖垮长跑：超时就当这条没执行，继续下一条
-        with contextlib.suppress(subprocess.TimeoutExpired):
-            subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=30,
-            )
-    if not dry_run and commands:
-        time.sleep(1.0)
-
-
 def reanalyze(path: Path) -> int:
     """用已有的采样数据重算结论。
 
@@ -217,7 +202,7 @@ def reanalyze(path: Path) -> int:
     report.handle_slope_per_min, report.handle_slope_steady = steady_slope(samples, "handles")
     report.thread_slope_per_min = _slope(samples, "threads")
     print(f"（重算 {path}，未跑新测试）")
-    render(report, samples)
+    render(report, samples, output=path)
     return 0
 
 
@@ -229,6 +214,11 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
     parser.add_argument("--only", default="", help="只用某个任务，可减少环境扰动")
     parser.add_argument("--tasks", default=str(TASK_FILE))
     parser.add_argument("--provider", default="dashscope")
+    parser.add_argument("--model", default="", help="模型 ID；留空则从客机配置读取")
+    parser.add_argument("--engine", choices=("legacy", "langgraph"), default="legacy")
+    parser.add_argument("--planner-template", default="")
+    parser.add_argument("--executor-template", default="")
+    parser.add_argument("--output", default="", help="本次原始记录的独立 JSON 路径")
     parser.add_argument("--max-steps", type=int, default=6, help="每子任务步数上限，长跑取小值")
     parser.add_argument(
         "--analyze",
@@ -246,11 +236,13 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
     from agent.session import Session, SessionConfig
     from control.executor import ActionExecutor
     from core.loop import LoopConfig
+    from core.verify import SuccessCheck
     from grounding.native import NativeGrounding
     from llm.openai_compat import OpenAICompatBackend
     from llm.providers import load_dotenv_if_present, resolve
     from perception.capture import ScreenCapturer
     from perception.coordinate import CoordinateScaler
+    from scripts.run_basic_tasks import run_reset
 
     spec = yaml.safe_load(Path(args.tasks).read_text(encoding="utf-8"))
     tasks = spec["tasks"]
@@ -260,7 +252,7 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
             raise SystemExit(f"任务清单里没有 {args.only!r}")
 
     load_dotenv_if_present()
-    config = resolve(args.provider)
+    config = resolve(args.provider, model=args.model or None)
 
     print("=" * 74)
     print("稳定性测试")
@@ -268,6 +260,11 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
     print(f"  时长      {args.minutes} 分钟")
     print(f"  任务      {'、'.join(t['name'] for t in tasks)}（轮流跑）")
     print(f"  模型      {config.model}")
+    print(f"  引擎      {args.engine}")
+    print(
+        f"  提示词    {args.planner_template or SessionConfig.planner_template}"
+        f" + {args.executor_template or SessionConfig.executor_template}"
+    )
     print(f"  模式      {'**实机执行**' if args.execute else '演练（不碰键鼠）'}")
     print("\n  **成功率在这里不是指标。** 关心的是崩没崩、有没有泄漏。")
     if args.execute:
@@ -281,6 +278,10 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
         started_at=datetime.now().isoformat(timespec="seconds"),
         minutes=args.minutes,
         executed=bool(args.execute),
+        model=config.model,
+        engine=args.engine,
+        planner_template=args.planner_template or SessionConfig.planner_template,
+        executor_template=args.executor_template or SessionConfig.executor_template,
     )
 
     process = psutil.Process()
@@ -290,6 +291,12 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
     space = SessionConfig().coordinate_space
     scaler.register("planner", *space)
     executor = ActionExecutor(scaler, space_name="planner", dry_run=not args.execute)
+    executor.start()
+    if args.execute and not executor.emergency_stop.is_armed:
+        print("急停热键未挂载，停止一小时实机测试。")
+        executor.stop()
+        capturer.close()
+        return 2
 
     # 后端跨轮复用。每轮新建会泄漏 httpx 连接池 —— 这个泄漏正是本脚本
     # 第一次跑就测出来的（22 分钟句柄 369 → 1521）。
@@ -316,7 +323,30 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
                 steps=0,
             )
 
-            run_reset(task.get("reset"), dry_run=not args.execute)
+            if executor.emergency_stop.is_triggered:
+                report.aborted_reason = executor.emergency_stop.trigger_reason or "emergency_stop"
+                break
+            reset_errors = run_reset(task.get("reset"), dry_run=not args.execute)
+            if reset_errors:
+                report.aborted_reason = "reset: " + "；".join(reset_errors)
+                break
+            if executor.emergency_stop.is_triggered:
+                report.aborted_reason = executor.emergency_stop.trigger_reason or "emergency_stop"
+                break
+            if args.execute:
+                if executor.sentinel is not None:
+                    executor.sentinel.reset()
+                    hazards = executor.sentinel.scan_environment()
+                    if hazards:
+                        report.aborted_reason = "environment: " + "；".join(
+                            f"[{h.rule}] {h.evidence}" for h in hazards
+                        )
+                        break
+                if task.get("precondition"):
+                    ready, detail = SuccessCheck.from_spec(task["precondition"]).run()
+                    if not ready:
+                        report.aborted_reason = "precondition: " + detail
+                        break
 
             round_started = time.perf_counter()
             try:
@@ -326,7 +356,15 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
                     NativeGrounding(*space),
                     executor,
                     capturer,
-                    config=SessionConfig(loop=LoopConfig(max_iterations=args.max_steps)),
+                    config=SessionConfig(
+                        loop=LoopConfig(
+                            max_iterations=args.max_steps,
+                            engine=args.engine,
+                            max_unchanged_click_repeats=4,
+                        ),
+                        planner_template=args.planner_template or SessionConfig.planner_template,
+                        executor_template=args.executor_template or SessionConfig.executor_template,
+                    ),
                 )
                 result = session.run(task["instruction"])
                 record.status = result.status
@@ -342,6 +380,10 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
 
             record.duration_s = round(time.perf_counter() - round_started, 1)
             report.rounds.append(asdict(record))
+            if executor.emergency_stop.is_triggered:
+                report.aborted_reason = executor.emergency_stop.trigger_reason or "emergency_stop"
+                print(f"  急停触发：{report.aborted_reason}；长跑停止")
+                break
 
             mark = "!" if record.error else "."
             print(
@@ -364,7 +406,9 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
         report.crashed = True
         traceback.print_exc(file=sys.stderr)
 
+    executor.stop()
     backend.close()
+    capturer.close()
     report.samples.append(asdict(_sample(process, started, index)))
     report.errors = dict(errors)
     samples = [Sample(**s) for s in report.samples]
@@ -372,8 +416,8 @@ def main() -> int:  # noqa: PLR0915 —— 长跑脚本，线性叙事比拆函�
     report.handle_slope_per_min, report.handle_slope_steady = steady_slope(samples, "handles")
     report.thread_slope_per_min = _slope(samples, "threads")
 
-    render(report, samples)
-    return 1 if report.crashed else 0
+    render(report, samples, output=Path(args.output) if args.output else RAW)
+    return 3 if report.aborted_reason else (1 if report.crashed else 0)
 
 
 def _verdict(steady: float, threshold: float, what: str) -> str:
@@ -390,7 +434,7 @@ def _verdict(steady: float, threshold: float, what: str) -> str:
     return f"{what}已进入稳态，未见泄漏。"
 
 
-def render(report: Report, samples: list[Sample]) -> None:
+def render(report: Report, samples: list[Sample], output: Path = RAW) -> None:
     total_min = samples[-1].elapsed_s / 60 if samples else 0.0
     rounds = report.rounds
     failed = [r for r in rounds if r["error"]]
@@ -402,6 +446,8 @@ def render(report: Report, samples: list[Sample]) -> None:
     print("=" * 74)
     print(f"  实际跑了   {total_min:.1f} 分钟 / {len(rounds)} 轮")
     print(f"  进程崩溃   {'**是**' if report.crashed else '否'}")
+    if report.aborted_reason:
+        print(f"  提前停止   {report.aborted_reason[:160]}")
     print(f"  异常轮次   {len(failed)}/{len(rounds)}")
     if report.errors:
         for name, count in report.errors.items():
@@ -428,8 +474,9 @@ def render(report: Report, samples: list[Sample]) -> None:
             )
             print("     " + _verdict(report.handle_slope_steady, 5.0, "句柄"))
 
-    RAW.parent.mkdir(parents=True, exist_ok=True)
-    RAW.write_text(json.dumps(asdict(report), ensure_ascii=False, indent=2), encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(asdict(report), ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path = REPORT if output == RAW else output.with_suffix(".md")
 
     lines = [
         "# M2 稳定性测试报告",
@@ -443,6 +490,8 @@ def render(report: Report, samples: list[Sample]) -> None:
         f"- 进程崩溃：**{'是' if report.crashed else '否'}**",
         f"- 异常轮次：**{len(failed)}/{len(rounds)}**",
     ]
+    if report.aborted_reason:
+        lines.append(f"- 提前停止：**{report.aborted_reason[:160]}**")
     if rss:
         lines += [
             f"- RSS：起 {rss[0]:.0f}MB → 止 {rss[-1]:.0f}MB，峰值 {max(rss):.0f}MB",
@@ -477,11 +526,11 @@ def render(report: Report, samples: list[Sample]) -> None:
         f"| {s.elapsed_s / 60:.1f} | {s.rss_mb:.0f} | {s.threads} | {s.handles} | {s.rounds_done} |"
         for s in samples
     ]
-    lines += ["", f"原始数据：`{RAW}`", ""]
+    lines += ["", f"原始数据：`{output}`", ""]
 
-    REPORT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"\n  报告 {REPORT}")
-    print(f"  原始 {RAW}")
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"\n  报告 {report_path}")
+    print(f"  原始 {output}")
 
 
 if __name__ == "__main__":
