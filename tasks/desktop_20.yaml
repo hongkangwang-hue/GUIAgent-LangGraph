@@ -549,7 +549,7 @@ tasks:
         - type: file_contains
           path: C:/agent-test/长文档.txt
           text: 末尾已到达
-        # 最后一行的标记必须还在——证明确实到了末尾而不是插在中间
+        # 原有末行标记必须保留；仅靠 file_contains 不能证明新行位于末尾。
         - type: file_contains
           path: C:/agent-test/长文档.txt
           text: 这是最后一行
