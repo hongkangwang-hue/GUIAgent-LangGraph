@@ -23,7 +23,7 @@ param(
     )]
     [string]$Stage,
     [string]$Model = 'qwen3-vl-8b-instruct',
-    [string]$PlannerTemplate = 'planner_v11',
+    [string]$PlannerTemplate = 'planner_v12',
     [string]$ExecutorTemplate = 'executor_v5',
     [string]$SnapshotName = '',
     [string]$StartAt = 'rename_file'
