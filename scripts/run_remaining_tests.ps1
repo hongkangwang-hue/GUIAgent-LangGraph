@@ -4,6 +4,7 @@
 未提供 VMware 快照名时仍可试跑，但各批结果不能称为同快照对照。
 
 示例：
+  .\scripts\run_remaining_tests.ps1 -Stage w7-untested
   .\scripts\run_remaining_tests.ps1 -Stage w7-pilot
   .\scripts\run_remaining_tests.ps1 -Stage w7-full
   .\scripts\run_remaining_tests.ps1 -Stage w6-long
@@ -15,7 +16,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet(
-        'w7-pilot', 'w7-full', 'w6-long',
+        'w7-untested', 'w7-pilot', 'w7-full', 'w6-long',
         'w6-settle-fixed', 'w6-settle-adaptive',
         'engine-legacy', 'engine-langgraph', 'w6-stability'
     )]
@@ -94,9 +95,20 @@ $week7Pending = @(
     'create_folder', 'rename_file', 'delete_file', 'scroll_document',
     'calc_to_notepad', 'read_and_summarize', 'multi_app_workflow'
 )
+$week7Untested = @(
+    'rename_file', 'delete_file', 'scroll_document',
+    'calc_to_notepad', 'read_and_summarize', 'multi_app_workflow'
+)
 $basicNames = @('open_browser', 'search_content', 'open_file', 'send_message', 'close_app')
 
 switch ($Stage) {
+    'w7-untested' {
+        foreach ($taskName in $week7Untested) {
+            # 普通判定失败也继续下一项，以便六项都有首次实测记录。
+            # 急停、起点无效或批次不完整仍由 Invoke-TaskBatch 停止。
+            Invoke-TaskBatch -TaskFile 'tasks/desktop_20.yaml' -Only $taskName -Repeats 1
+        }
+    }
     'w7-pilot' {
         foreach ($taskName in $week7Pending) {
             Invoke-TaskBatch -TaskFile 'tasks/desktop_20.yaml' -Only $taskName -Repeats 1 -RequirePass
