@@ -5,6 +5,7 @@
 
 示例：
   .\scripts\run_remaining_tests.ps1 -Stage w7-untested
+  .\scripts\run_remaining_tests.ps1 -Stage w7-untested -StartAt delete_file
   .\scripts\run_remaining_tests.ps1 -Stage w7-pilot
   .\scripts\run_remaining_tests.ps1 -Stage w7-full
   .\scripts\run_remaining_tests.ps1 -Stage w6-long
@@ -24,7 +25,8 @@ param(
     [string]$Model = 'qwen3-vl-8b-instruct',
     [string]$PlannerTemplate = 'planner_v10',
     [string]$ExecutorTemplate = 'executor_v5',
-    [string]$SnapshotName = ''
+    [string]$SnapshotName = '',
+    [string]$StartAt = 'rename_file'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,7 +53,8 @@ function Invoke-TaskBatch {
         [switch]$AdaptiveSettle,
         [switch]$RequirePass
     )
-    $tag = "$Stage-$Model-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    # run_basic_tasks.py 把文件名里的 tag 截到 40 字符；存档 JSON 保留完整 tag。
+    $tag = "$Stage-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     $runnerArgs = @(
         'scripts/run_basic_tasks.py', '--execute',
         '--tasks', $TaskFile, '--repeats', [string]$Repeats,
@@ -64,14 +67,25 @@ function Invoke-TaskBatch {
     if ($Only) { $runnerArgs += @('--only', $Only) }
     if ($AdaptiveSettle) { $runnerArgs += '--adaptive-settle' }
     if ($SnapshotName) { $runnerArgs += @('--guest-snapshot', $SnapshotName) }
+    $started = Get-Date
     & python @runnerArgs
     $runnerExitCode = $LASTEXITCODE
 
     $scope = if ($Only) { $Only } else { 'all' }
-    $archive = Get-ChildItem -LiteralPath 'docs\m2-runs' -File -Filter "*-$scope-exec-online-$tag.json" |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $archive = $null
+    $data = $null
+    $candidates = Get-ChildItem -LiteralPath 'docs\m2-runs' -File -Filter "*-$scope-exec-online-*.json" |
+        Where-Object { $_.LastWriteTime -ge $started.AddMinutes(-1) } |
+        Sort-Object LastWriteTime -Descending
+    foreach ($candidate in $candidates) {
+        $candidateData = Get-Content -LiteralPath $candidate.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($candidateData.tag -eq $tag -and $candidateData.scope -eq $scope) {
+            $archive = $candidate
+            $data = $candidateData
+            break
+        }
+    }
     if (-not $archive) { throw "没有找到本次存档：$scope / $tag" }
-    $data = Get-Content -LiteralPath $archive.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
     $records = @($data.records)
     $invalid = @($records | Where-Object { -not $_.precondition_ok -or $_.excluded })
     $failed = @($records | Where-Object { $_.precondition_ok -and -not $_.excluded -and -not $_.verified })
@@ -103,7 +117,9 @@ $basicNames = @('open_browser', 'search_content', 'open_file', 'send_message', '
 
 switch ($Stage) {
     'w7-untested' {
-        foreach ($taskName in $week7Untested) {
+        $startIndex = [array]::IndexOf($week7Untested, $StartAt)
+        if ($startIndex -lt 0) { throw "StartAt 必须是第 15–20 项任务名之一：$($week7Untested -join ', ')" }
+        foreach ($taskName in $week7Untested[$startIndex..($week7Untested.Count - 1)]) {
             # 普通判定失败也继续下一项，以便六项都有首次实测记录。
             # 急停、起点无效或批次不完整仍由 Invoke-TaskBatch 停止。
             Invoke-TaskBatch -TaskFile 'tasks/desktop_20.yaml' -Only $taskName -Repeats 1
